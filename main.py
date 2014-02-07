@@ -1,4 +1,5 @@
 import datetime
+import csv
 # Initial prototype
 # Needs to make a mock strategy 
 # - A mock forecast (forecaster module called weatherman?)
@@ -17,6 +18,13 @@ import datetime
 
 
 # Ultimately the metrics forecasted as inputs for the optimizer are part of the financial strategy and may have different models for each one
+
+def make_line(line):
+    #TODO: probably put into data frame format
+    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d").date(), "Open":float(line[1]), "High":float(line[2]), "Low":float(line[3]), "Close":float(line[4]), "Volume":int(line[5])}
+
+def load():
+    return dict([(l["Date"], l) for l in [make_line(line) for line in [l for l in csv.reader(open("spy.csv"))][1:]]])
 
 class Weatherman:
     def forecast(self, asset, time_point, period):
@@ -60,7 +68,7 @@ class Furnace:
 
         metrics = []
 
-        for trading_period in strategy.periods_during(datetime.date(2001,1,1), datetime.date(2013,1,1)):
+        for trading_period in strategy.periods_during(datetime.date(2001,1,2), datetime.date(2012,12,31)):
             #  a trading period needs to be a pair of dates so we can calculate return during the whole time. the simplest trading period would have
             # an ending date the same as the next period's begin date
 
@@ -84,12 +92,13 @@ class Furnace:
 
     def generate_metrics(self, begin_portfolio, end_portfolio):
         """ Right now just generates growth for CAGR """
-        return growth(begin_portfolio, end_portfolio)
+        g = growth(begin_portfolio, end_portfolio)
+        print g
+        return g
 
 def growth(begin_portfolio, end_portfolio):
     """ The growth or reduction in value from the begin to the end """
-    #TODO: better
-    return 1.0
+    return (end_portfolio.value() - begin_portfolio.value()) / begin_portfolio.value()
 
 class Strategy:
     """ A pair of weatherman and portfolio optimizer """
@@ -97,6 +106,10 @@ class Strategy:
 
 class SimpleStrategy(Strategy):
     """ Al Roker and a first year business student walk into a bar... """
+
+    def __init__(self, assetFactory):
+        self._assetFactory = assetFactory
+
     def portfolio_optimizer(self):
         return FreshmanBusinessStudent()
 
@@ -114,7 +127,14 @@ class SimpleStrategy(Strategy):
         """ Generates a portfolio this strategy would recommend for date """
 
         #TODO: generate a better portfolio
-        return Portfolio([Position(Asset("SPY"),Weight(1.0))])
+        return Portfolio([Position(self._assetFactory.make_asset("SPY"),Weight(1.0))], date)
+
+class AssetFactory:
+    def __init__(self, data_cache):
+        self._data_cache = data_cache
+
+    def make_asset(self, symbol):
+        return Asset(symbol, self._data_cache)
 
 class TradingPeriod:
     """ The begining and end of an entire trading period on which metrics can be collected """
@@ -131,22 +151,50 @@ class TradingPeriod:
 class Position:
     """ Represents a certain holding of an asset """
     def __init__(self, asset, weight):
-        pass
+        self._asset = asset
+        self._weight = weight
+
+    def asset(self):
+        return self._asset
+
+    def weight(self):
+        return self._weight
 
 class Asset:
     """ Represents a tradable security, by symbol """
-    def __init__(self, symbol):
-        pass
+    def __init__(self, symbol, data_cache):
+        self._symbol = symbol
+        self._data_cache = data_cache
+
+    def price(self, date):
+        #TODO: this is a little too OO given that we're going to be dealing with big rows of things, so we may end up doing a big query at the front and then looking up things in a cache
+        #TODO: do a price lookup in our data warehouse
+        #TODO: handle missing dates better:
+
+        try:
+            return self._data_cache[self._symbol][date]["Close"]
+        except(KeyError):
+            return self.price(date - datetime.timedelta(1))
 
 class Weight:
     """ Represents a weighting out of 100% of holding an asset """
     def __init__(self, weight):
-        pass
+        self._weight = weight
+
+    def __mul__(self, rhs):
+        return self._weight * rhs
 
 class Portfolio:
     """ A collection of assets and their weights/holdings """
-    def __init__(self, positions):
-        pass
+    def __init__(self, positions, date):
+        #TODO: assert that weights add up to 100%
+        self._positions = positions
+        self._date = date
+
+    def value(self):
+        #TODO: come up with better name, this isn't really the 'value'
+        """ Returns the weights of this portfolio times the price of the assets, roughly how much money you'd need for 'one share' of this portfolio """
+        return sum([position.weight() * position.asset().price(self._date) for position in self._positions]) 
 
 class PerformanceMetrics:
     """ Currently just CAGR """
@@ -154,9 +202,9 @@ class PerformanceMetrics:
 
 def main():
     f = Furnace()
-    p = f.fire(SimpleStrategy())
-    print p
-
+    data_cache = {}
+    data_cache["SPY"] = load()
+    p = f.fire(SimpleStrategy(AssetFactory(data_cache)))
 
 if "__main__"==__name__:
     main()
