@@ -1,5 +1,7 @@
 import datetime
 import csv
+import scipy.stats.mstats
+import numpy
 # Initial prototype
 # Needs to make a mock strategy 
 # - A mock forecast (forecaster module called weatherman?)
@@ -16,6 +18,9 @@ import csv
 #over a corresponding period
 #First metrics will be expected return, expected volatility and expected correlation
 
+#Steps:
+# - Implement a buy and hold on the spy strategy
+# - Implement an 80%/20% strategy of spy and lqd
 
 # Ultimately the metrics forecasted as inputs for the optimizer are part of the financial strategy and may have different models for each one
 
@@ -35,9 +40,17 @@ class AlRoker(Weatherman):
     def forecast(self, asset, time_point, period):
         return SimpleReturn(.01) #sounds about right?
 
-#Represents projected metrics from a forecaster
 class Forecast:
-    pass
+    """ Represents metrics from a forecaster. Currently assumes growth but can be attached to any value in the future """
+    def __init__(self, asset, growth):
+        self._asset = asset
+        self._growth = growth
+
+    def asset(self):
+        return self._asset
+
+    def growth(self):
+        return self._growth
 
 class SimpleReturn(Forecast):
     "A forecast of the return of an asset class"
@@ -66,7 +79,7 @@ class Furnace:
         #we ultimately want - for a particular date (dates set by the periodicity), what are the holdings the strategy would advise
         #then what are the returns of those holdings over the period?
 
-        metrics = []
+        performance_measurements = []
 
         for trading_period in strategy.periods_during(datetime.date(2001,1,2), datetime.date(2012,12,31)):
             #  a trading period needs to be a pair of dates so we can calculate return during the whole time. the simplest trading period would have
@@ -76,7 +89,7 @@ class Furnace:
             begin_portfolio = strategy.portfolio_on(trading_period.begin())
             end_portfolio = strategy.portfolio_on(trading_period.end())
 
-            metrics.append(self.generate_metrics(begin_portfolio, end_portfolio))
+            performance_measurements.append(self.measure_performance(begin_portfolio, end_portfolio))
 
 
         #we want to pass a set of trading periods in with their inputs as we'd know them
@@ -88,46 +101,67 @@ class Furnace:
         # - volatility
         # - max drawdown
 
-        return metrics
+        return self.generate_metrics(performance_measurements)
 
-    def generate_metrics(self, begin_portfolio, end_portfolio):
+    def generate_metrics(self, performance_measurements):
+        """ Calculates CAGR """
+        return scipy.stats.mstats.gmean(performance_measurements)
+        
+    def measure_performance(self, begin_portfolio, end_portfolio):
         """ Right now just generates growth for CAGR """
-        g = growth(begin_portfolio, end_portfolio)
-        print g
-        return g
+        return growth(begin_portfolio, end_portfolio)
 
 def growth(begin_portfolio, end_portfolio):
     """ The growth or reduction in value from the begin to the end """
-    return (end_portfolio.value() - begin_portfolio.value()) / begin_portfolio.value()
+    return 1.0 + (end_portfolio.value() - begin_portfolio.value()) / begin_portfolio.value()
 
 class Strategy:
     """ A pair of weatherman and portfolio optimizer """
     pass
 
-class SimpleStrategy(Strategy):
-    """ Al Roker and a first year business student walk into a bar... """
 
-    def __init__(self, assetFactory):
+class BuyAndHoldPortfolio(PortfolioOptimizer):
+    """ Purchases the SPY at the begining period and holds it to the end """
+    def __init__(self, begin_date):
+        self._begin_date = begin_date
+
+    def optimize(self, forecasts, date):
+        return Portfolio([Position(forecasts[0].asset(), Weight(1.0))], date)
+
+class NullForecaster(Weatherman):
+    """ Returns no change for all assets """
+    def forecast(self, asset, time_point, period):
+        return Forecast(asset, 1.0)
+
+class BuyAndHoldStocks(Strategy):
+    """ Purchases the SPY at the begining period and holds it to the end """
+
+    def __init__(self, assetFactory, begin_date):
         self._assetFactory = assetFactory
+        self._begin_date = begin_date
+        self._forecaster = self.weatherman()
+        self._portfolio_optimizer = self.portfolio_optimizer()
 
     def portfolio_optimizer(self):
-        return FreshmanBusinessStudent()
+        return BuyAndHoldPortfolio(self._begin_date)
 
     def weatherman(self):
-        return AlRoker()
+        return NullForecaster()
 
     def periods_during(self, begin_date, end_date):
         """ Simple strategy simply trades daily """
 
         #TODO: pick better dates obviously
         for day in range((end_date - begin_date).days):
-            yield TradingPeriod(begin_date, begin_date + datetime.timedelta(day))
+            yield TradingPeriod(begin_date + datetime.timedelta(day), begin_date + datetime.timedelta(day + 1))
 
     def portfolio_on(self, date):
         """ Generates a portfolio this strategy would recommend for date """
 
-        #TODO: generate a better portfolio
-        return Portfolio([Position(self._assetFactory.make_asset("SPY"),Weight(1.0))], date)
+        forecast = [self._forecaster.forecast(self._assetFactory.make_asset("SPY"), date, datetime.timedelta(1))]
+        portfolio = self._portfolio_optimizer.optimize(forecast, date)
+        return portfolio
+
 
 class AssetFactory:
     def __init__(self, data_cache):
@@ -196,6 +230,9 @@ class Portfolio:
         """ Returns the weights of this portfolio times the price of the assets, roughly how much money you'd need for 'one share' of this portfolio """
         return sum([position.weight() * position.asset().price(self._date) for position in self._positions]) 
 
+    def date(self):
+        return self._date
+
 class PerformanceMetrics:
     """ Currently just CAGR """
     pass
@@ -204,7 +241,9 @@ def main():
     f = Furnace()
     data_cache = {}
     data_cache["SPY"] = load()
-    p = f.fire(SimpleStrategy(AssetFactory(data_cache)))
+    p = f.fire(BuyAndHoldStocks(AssetFactory(data_cache),datetime.date(2001,1,2)))
+    assert numpy.isclose(p, 1.00002291096, 1e-12, 1e-12)
+    print p
 
 if "__main__"==__name__:
     main()
