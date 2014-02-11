@@ -2,6 +2,7 @@ import datetime
 import csv
 import scipy.stats.mstats
 import numpy
+import operator
 # Initial prototype
 # Needs to make a mock strategy 
 # - A mock forecast (forecaster module called weatherman?)
@@ -24,6 +25,7 @@ import numpy
 
 # Ultimately the metrics forecasted as inputs for the optimizer are part of the financial strategy and may have different models for each one
 
+
 def make_line(line):
     #TODO: probably put into data frame format
     return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d").date(), "Open":float(line[1]), "High":float(line[2]), "Low":float(line[3]), "Close":float(line[4]), "Volume":int(line[5])}
@@ -34,11 +36,6 @@ def load():
 class Weatherman:
     def forecast(self, asset, time_point, period):
         raise Exception("Not implemented yet")
-
-#A simple guess forecaster, probably should stick to the Macy's Thanksgiving days parade
-class AlRoker(Weatherman):
-    def forecast(self, asset, time_point, period):
-        return SimpleReturn(.01) #sounds about right?
 
 class Forecast:
     """ Represents metrics from a forecaster. Currently assumes growth but can be attached to any value in the future """
@@ -52,11 +49,6 @@ class Forecast:
     def growth(self):
         return self._growth
 
-class SimpleReturn(Forecast):
-    "A forecast of the return of an asset class"
-    def __init__(self, return_, asset_class):
-        self.return_ = return_
-
 class PortfolioOptimizer:
     """ Given a forecast for a set of assets, returns the optimal weighting of each asset in a 
     portfolio """
@@ -64,11 +56,6 @@ class PortfolioOptimizer:
         """ Forecasts need to be able to back point to their asset class and thus implicitly define
         the asset universe """
         raise Exception("Not implemented yet")
-
-class FreshmanBusinessStudent(PortfolioOptimizer):
-    """ A really dumb portfolio optimizer. Simply returns 100% on the first asset in the list """
-    def optimizer(self, forecasts):
-        return Portfolio(Weight(100, forecasts[0].asset_class))
 
 class Furnace:
     """ Our testing framework """
@@ -79,17 +66,19 @@ class Furnace:
         #we ultimately want - for a particular date (dates set by the periodicity), what are the holdings the strategy would advise
         #then what are the returns of those holdings over the period?
 
-        performance_measurements = []
+        performance = strategy.performance_during(datetime.date(2001, 1, 2), datetime.date(2012, 12, 31))
 
-        for trading_period in strategy.periods_during(datetime.date(2001,1,2), datetime.date(2012,12,31)):
+        #performance_measurements = []
+
+        #for trading_period in strategy.periods_during(datetime.date(2001,1,2), datetime.date(2012,12,31)):
             #  a trading period needs to be a pair of dates so we can calculate return during the whole time. the simplest trading period would have
             # an ending date the same as the next period's begin date
 
             # the portfolios need to know their dates for metrics to be useful
-            begin_portfolio = strategy.portfolio_on(trading_period.begin())
-            end_portfolio = strategy.portfolio_on(trading_period.end())
-
-            performance_measurements.append(self.measure_performance(begin_portfolio, end_portfolio))
+        #    begin_portfolio = strategy.portfolio_on(trading_period.begin())
+        #    end_portfolio = strategy.portfolio_on(trading_period.end())
+#
+#            performance_measurements.append(self.measure_performance(begin_portfolio, end_portfolio))
 
 
         #we want to pass a set of trading periods in with their inputs as we'd know them
@@ -101,15 +90,7 @@ class Furnace:
         # - volatility
         # - max drawdown
 
-        return self.generate_metrics(performance_measurements)
-
-    def generate_metrics(self, performance_measurements):
-        """ Calculates CAGR """
-        return scipy.stats.mstats.gmean(performance_measurements)
-        
-    def measure_performance(self, begin_portfolio, end_portfolio):
-        """ Right now just generates growth for CAGR """
-        return growth(begin_portfolio, end_portfolio)
+        return performance
 
 def growth(begin_portfolio, end_portfolio):
     """ The growth or reduction in value from the begin to the end """
@@ -149,11 +130,9 @@ class BuyAndHoldStocks(Strategy):
         return NullForecaster()
 
     def periods_during(self, begin_date, end_date):
-        """ Simple strategy simply trades daily """
+        """ Buy and hold only has one single period """
 
-        #TODO: pick better dates obviously
-        for day in range((end_date - begin_date).days):
-            yield TradingPeriod(begin_date + datetime.timedelta(day), begin_date + datetime.timedelta(day + 1))
+        yield TradingPeriod(begin_date, end_date)
 
     def portfolio_on(self, date):
         """ Generates a portfolio this strategy would recommend for date """
@@ -162,6 +141,54 @@ class BuyAndHoldStocks(Strategy):
         portfolio = self._portfolio_optimizer.optimize(forecast, date)
         return portfolio
 
+    def performance_during(self, begin_date, end_date):
+        return OverallPerformance([PeriodPerformance(self.portfolio_on(trading_period.begin()), self.portfolio_on(trading_period.end())) for trading_period in self.periods_during(begin_date, end_date)])
+
+class OverallPerformance:
+    """ OverallPerformance is how a strategy does over time. """
+
+    def __init__(self, portfolio_periods):
+        """ Currently expects a dict of dates to portfolios """
+        self._portfolio_periods = portfolio_periods
+
+    def average_return(self):
+        """ Returns geometric average of returns. 
+            Note: This is pretty worthless since you don't really know how many periods there are. """
+        return scipy.stats.mstats.gmean([p.growth() for p in self._portfolio_periods])
+
+    def total_return(self):
+        """ Returns the total return from begining to end """
+        return reduce(operator.mul, [p.growth() for p in self._portfolio_periods])
+    
+    def years(self):
+        """ Number of years in performance period """
+        days = (self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()).days
+        return days / 365.0
+
+    def CAGR(self):
+        """ Returns the compound annual growth rate """
+        #we know we're currently using daily's. Eventually we need to adjust this to basically take the overall growth and then divide it by the time.
+        #these seem like things that should be known from the period performances.
+        return pow(self.total_return(), 1.0 / self.years())
+
+class PeriodPerformance:
+    """ How a strategy does over it's trading period """
+
+    def __init__(self, begin_portfolio, end_portfolio):
+        self._begin_portfolio = begin_portfolio
+        self._end_portfolio = end_portfolio
+
+    def growth(self):
+        """ Growth from begin to end period """
+        return growth(self._begin_portfolio, self._end_portfolio)
+
+    def begin(self):
+        """ Returns start date of this period """
+        return self._begin_portfolio.date()
+
+    def end(self):
+        """ Return end date of this performance period """
+        return self._end_portfolio.date()
 
 class AssetFactory:
     def __init__(self, data_cache):
@@ -233,7 +260,7 @@ class Portfolio:
     def date(self):
         return self._date
 
-class PerformanceMetrics:
+class PeriodPerformanceMetrics:
     """ Currently just CAGR """
     pass
 
@@ -242,8 +269,8 @@ def main():
     data_cache = {}
     data_cache["SPY"] = load()
     p = f.fire(BuyAndHoldStocks(AssetFactory(data_cache),datetime.date(2001,1,2)))
-    assert numpy.isclose(p, 1.00002291096, 1e-12, 1e-12)
-    print p
+    print p.average_return(), p.CAGR()
+    assert numpy.isclose(p.CAGR(), 1.00839746759, 1e-11, 1e-11)
 
 if "__main__"==__name__:
     main()
