@@ -1,12 +1,3 @@
-import datetime
-import scipy.stats.mstats
-import numpy
-import operator
-import data
-import weathermen
-import portfolio
-import performance
-import strategy
 # Initial prototype
 # Needs to make a mock strategy 
 # - A mock forecast (forecaster module called weatherman?)
@@ -30,12 +21,7 @@ import strategy
 # Ultimately the metrics forecasted as inputs for the optimizer are part of the financial strategy and may have different models for each one
 
 def main():
-    f = performance.Furnace()
-    data_cache = {}
-    data_cache["SPY"] = data.load()
-    p = f.fire(strategy.BuyAndHoldStocks(data.AssetFactory(data_cache),datetime.date(2001,1,2)))
-    print p.CAGR()
-    assert numpy.isclose(p.CAGR(), 1.00839746759, 1e-11, 1e-11)
+    pass
 
 if "__main__"==__name__:
     main()
