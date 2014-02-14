@@ -1,3 +1,5 @@
+""" Performance tracking """
+
 import datetime
 import scipy.stats.mstats
 import numpy
@@ -51,7 +53,7 @@ class OverallPerformance:
     def total_return(self):
         """ Returns the total return from begining to end """
         return reduce(operator.mul, [p.growth() for p in self._portfolio_periods])
-    
+
     def years(self):
         """ Number of years in performance period """
         days = (self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()).days
@@ -82,7 +84,7 @@ class PeriodPerformance:
         """ Return end date of this performance period """
         return self._end_portfolio.date()
 
-class PeriodPerformanceMetrics:
+class PeriodPerformanceMetrics(object):
     """ Currently just CAGR """
     pass
 
