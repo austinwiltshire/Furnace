@@ -34,7 +34,7 @@ class Portfolio:
 
     def value(self):
         """ What's the value of this portfolio? """
-        #TODO: come up with better name, this isn't really the 'value'
+        #TODO: rename "index value" since it's not a true value as we don't really own mroe than 'one unit' over time
         """ Returns the weights of this portfolio times the price of the assets, roughly how much money you'd need for 'one share' of this portfolio """
         return sum([position.weight() * position.asset().price(self._date) for position in self._positions])
 

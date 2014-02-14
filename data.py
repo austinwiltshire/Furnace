@@ -19,10 +19,7 @@ class Asset(object):
 
     def price(self, date):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
-        #TODO: this is a little too OO given that we're going to be dealing with big rows of things, so we may end up
-        #doing a big query at the front and then looking up things in a cache
-        #TODO: do a price lookup in our data warehouse
-        #TODO: handle missing dates better:
+        #TODO: use financial datetime library to elevate key errors on weekends and non trading dates
 
         try:
             return self._data_cache[self._symbol][date]["Close"]

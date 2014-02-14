@@ -1,5 +1,7 @@
 """ For overall financial strategies - pairs of forecasters and portfolio optimizers """
 
+# Ultimately the metrics forecasted as inputs for the optimizer are part of the financial strategy and may have different models for each one
+
 import performance
 import weathermen
 import portfolio
