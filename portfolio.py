@@ -33,10 +33,14 @@ class Portfolio:
         self._date = date
 
     def value(self):
-        """ What's the value of this portfolio? """
+        """ Returns the weights of this portfolio times the price of the assets, roughly how much money you'd need for
+            'one share' of this portfolio """
         #TODO: rename "index value" since it's not a true value as we don't really own mroe than 'one unit' over time
-        """ Returns the weights of this portfolio times the price of the assets, roughly how much money you'd need for 'one share' of this portfolio """
         return sum([position.weight() * position.asset().price(self._date) for position in self._positions])
+
+    def on_date(self, date):
+        """ Returns a new portfolio who's positions are the same but the date is adjusted """
+        return Portfolio(self._positions, date)
 
     def date(self):
         """ Getter for the date of this portfolio """
