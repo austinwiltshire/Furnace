@@ -35,8 +35,13 @@ class OverallPerformance(object):
 
     def years(self):
         """ Number of years in performance period """
-        days = (self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()).days
-        return days / 365.0
+        #TODO: financial datetime or somethign that just returns a generic time duration that can be cast
+        #to days or years
+        return self.days() / 365.0
+
+    def days(self):
+        """ Number of days in performance period """
+        return (self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()).days
 
     def CAGR(self):
         """ Returns the compound annual growth rate """
@@ -54,6 +59,10 @@ class OverallPerformance(object):
         before_periods = [p for p in sorted_periods if p.end() < date]
         index_at_begin = reduce(operator.mul, [p.growth() for p in before_periods], 1.0)
         return index_base * index_at_begin * applicable_period.index_on(date, 1.0)
+
+    def begin(self):
+        """ Returns beginning date of this performance period """
+        return sorted(self._portfolio_periods, cmp=lambda x, y: x.begin() < y.begin())[0].begin()
 
 class PeriodPerformance(object):
     """ How a strategy does over it's trading period """
