@@ -1,7 +1,7 @@
 """ Performance tracking """
 
-# - equity curve
-# - cagr
+# - equity curve (DONE)
+# - cagr (DONE)
 # - volatility
 # - max drawdown
 
@@ -12,6 +12,7 @@ import operator
 import data
 import weathermen
 import portfolio
+import matplotlib.pyplot as plt
 
 class Furnace(object):
     """ Our testing framework """
@@ -59,6 +60,16 @@ class OverallPerformance(object):
         before_periods = [p for p in sorted_periods if p.end() < date]
         index_at_begin = reduce(operator.mul, [p.growth() for p in before_periods], 1.0)
         return index_base * index_at_begin * applicable_period.index_on(date, 1.0)
+
+    def plot_index(self, index_base=100.0):
+        """ Plots a day by day performance on a matplotlib chart """
+        dates = [self.begin() + datetime.timedelta(day) for day in range(self.days() + 1)]
+        values = [self.index_on(day, index_base) for day in dates]
+
+        plt.plot(numpy.array(dates), numpy.array(values))
+        plt.show()
+        #TODO: move these plots over to non pyplot so that they can be eaisly analyzed and combined without looking
+        #at them
 
     def begin(self):
         """ Returns beginning date of this performance period """
