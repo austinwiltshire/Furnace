@@ -99,8 +99,3 @@ class PeriodPerformance(object):
         #TODO: consider "growth by" instead of an index based approach
         assert self.begin() <= date <= self.end()
         return index_base * portfolio.growth(self._begin_portfolio, self._begin_portfolio.on_date(date))
-
-class PeriodPerformanceMetrics(object):
-    """ Currently just CAGR """
-    pass
-
