@@ -23,47 +23,86 @@ class BuyAndHoldPortfolio(PortfolioOptimizer):
 
     def optimize(self, forecasts, date):
         """ Simply sets 100% weight to the first asset returned in the forecast """
-        return Portfolio([Position(forecasts[0].asset(), Weight(1.0))], date)
+        return Portfolio([Position(forecasts[0].asset(), Share(1.0))], date)
+
+class MixedBuyAndHold(PortfolioOptimizer):
+    """ Purchases 80% SPY and 20% BIL """
+    def __init__(self, begin_date):
+        super(MixedBuyAndHold, self).__init__()
+        self._begin_date = begin_date
+        #TODO: could take in the asset names i want to track and then look them up in the forecasts
+
+    def optimize(self, forecasts, date):
+        return Portfolio([Position(forecasts[0].asset(), Share(.1)), Position(forecasts[1].asset(), Share(.9))], date)
 
 class Portfolio:
-    """ A collection of assets and their weights/holdings """
+    """ A collection of assets and their share/holdings """
     def __init__(self, positions, date):
-        #TODO: assert that weights add up to 100%
         self._positions = positions
         self._date = date
 
     def value(self):
-        """ Returns the weights of this portfolio times the price of the assets, roughly how much money you'd need for
+        """ Returns the share of this portfolio times the price of the assets, roughly how much money you'd need for
             'one share' of this portfolio """
         #TODO: rename "index value" since it's not a true value as we don't really own mroe than 'one unit' over time
-        return sum([position.weight() * position.asset().price(self._date) for position in self._positions])
+        return sum([position.share().value(position.asset().price(self._date)) for position in self._positions])
+
+    def yield_(self):
+        """ The CAGR of this portfolio's interest and dividend payments """
+        pass
 
     def on_date(self, date):
         """ Returns a new portfolio who's positions are the same but the date is adjusted """
-        return Portfolio(self._positions, date)
+        assert date >= self._date
+#        foo = True
+        foo = False
+        if foo:
+            return Portfolio(self._positions, date)
+        else:
+            return Portfolio([p.reinvest_dividends(self._date, date) for p in self._positions], date).dividends_accrued()
 
     def date(self):
         """ Getter for the date of this portfolio """
         return self._date
 
+    def dividends_accrued(self):
+        """ Creates a new portfolio with next dividend accrued, or partially counted. Used to judge growth - should nto """
+        return self
+
 class Position(object):
     """ Represents a certain holding of an asset """
-    def __init__(self, asset, weight):
+    def __init__(self, asset, share):
         self._asset = asset
-        self._weight = weight
+
+        assert isinstance(share, Share)
+        self._share = share
 
     def asset(self):
         """ Getter for the asset """
         return self._asset
 
-    def weight(self):
-        """ Getter for the weight """
-        return self._weight
+    def share(self):
+        """ Getter for the share """
+        return self._share
 
-class Weight(object):
-    """ Represents a weighting out of 100% of holding an asset """
-    def __init__(self, weight):
-        self._weight = weight
+    def reinvest_dividends(self, begin, end):
+        """ Creates a new position with the share adjusted for reinvested dividends between begin
+            and end dates """
+        dividends_received = 1.0 + self._asset.yield_between(begin, end)
+
+        #accrue dividends for future growth to smooth unless we actually haven't had time to
+        dividends_accrued = 1.0 + self._asset.yield_accrued(end) if begin != end else 1.0
+        return Position(self._asset, self._share * dividends_received * dividends_accrued)
+    #(1.0 + self._asset.yield_between(begin, end)))
+
+class Share(object):
+    """ Represents a holding an asset """
+    def __init__(self, share):
+        self._share = share
 
     def __mul__(self, rhs):
-        return self._weight * rhs
+        return Share(self._share * rhs)
+
+    def value(self, price):
+        """ Returns the value of this share given a price """
+        return price * self._share
