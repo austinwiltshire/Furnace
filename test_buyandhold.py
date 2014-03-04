@@ -1,4 +1,7 @@
-""" Tests strategies and tests known metrics """
+""" Tests strategies and tests known metrics. REGRESSION style tests simply test that known outputs from the models
+    do not vary with changes - there is no guarantee that their original values are correct. In many cases, a
+    combination of audit (print outputs and calculations, hand check a sample), code review or back of the envelope
+    calculations have been used to sanity check the outputs of regression style tests. """
 
 import unittest
 import datetime
@@ -24,7 +27,7 @@ class TestBuyAndHold(unittest.TestCase):
         begin = datetime.date(2001, 1, 2)
         end = datetime.date(2012, 12, 31)
         performance_ = self.furnace.fire(strategy.BuyAndHoldStocks(self.asset_factory, begin), begin, end)
-        self.assertTrue(numpy.isclose(performance_.CAGR(), 1.00839746759, 1e-11, 1e-11))
+        self.assertTrue(numpy.isclose(performance_.CAGR(), 1.02763283748, 1e-11, 1e-11))
 
     def test_index_index(self):
         """ Tests indexing a strategy with a base index """
@@ -40,6 +43,40 @@ class TestBuyAndHold(unittest.TestCase):
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2002, 1, 2), 100), 91.0677))
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2012, 12, 31), 100), 138.7037))
 
+class TestBondsAndStocks(unittest.TestCase):
+    """ Test various metrics on a buy and hold portfolio that is 90% stocks and 10% bonds """
+
+    def setUp(self):
+        """ Initialize fixture """
+        self.furnace = performance.Furnace()
+        self.data_cache = data.load() 
+        self.asset_factory = data.AssetFactory(self.data_cache)
+
+    def test_buy_and_hold(self):
+        """ REGRESSION tests mixed portfolio """
+        #TODO: move "data cache" into the data.py
+        #NOTE: data_cache will be eager loaded (current design, anyway)
+        begin = datetime.date(2003, 1, 2)
+        end = datetime.date(2012, 12, 31)
+        performance_ = self.furnace.fire(strategy.BuyAndHoldStocksAndBonds(self.asset_factory, begin), begin, end)
+
+        self.assertTrue(numpy.isclose(performance_.CAGR(), 1.06607730908, 1e-11, 1e-11))
+
+    def test_index_index(self):
+        """ REGRESSION tests mixed portfolio """
+        #TODO: should i grab begin and end from the data cache?
+        begin = datetime.date(2003, 1, 2)
+        end = datetime.date(2012, 12, 31)
+        strat = strategy.BuyAndHoldStocksAndBonds(self.asset_factory, datetime.date(2003, 1, 2))
+        performance_ = self.furnace.fire(strat, begin, end)
+
+        #TODO: refactor the commonality out of tehse tests
+        #TODO: this check below should always be true, i.e., index on start date is always 100
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2003, 1, 2), 100), 100))
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2003, 2, 1), 100), 96.3109))
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2004, 1, 2), 100), 121.0233))
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2012, 12, 31), 100), 189.6545))
+
 class TestAsset(unittest.TestCase):
     """ Tests the asset class """
     def setUp(self):
@@ -47,22 +84,12 @@ class TestAsset(unittest.TestCase):
         self.data_cache = data.load()
         self.asset_factory = data.AssetFactory(self.data_cache)
 
-#    def test_dividend(self):
-#        """ Test that we grab the right dividend amount on 10-10-2010 """
-#        spy = self.asset_factory.make_asset("SPY")
-#        self.assertTrue(numpy.isclose(spy.trailing_dividend(datetime.date(2010, 10, 10)), 2.203))
+    def test_average_yield(self):
+        """ REGRESSION Tests the average yield of SPY is each dividend divided by the price on the dividiend issue
+            date """
 
-#    def test_dividend_period(self):
-#        """ Test that we grab the right length of time for 10-10-2010 """
-#        spy = self.asset_factory.make_asset("SPY")
-#        self.assertEqual(spy.dividend_period(datetime.date(2010, 10, 10)).days, 91)
-
-#    def test_yield(self):
-#        """ Test the yield calculation on 10-10-2010 """
-#        spy = self.asset_factory.make_asset("SPY")
-#        self.assertTrue(numpy.isclose(spy.trailing_yield(datetime.date(2010, 10, 10)), 0.018903380813454))
-
-#TODO: add unit test for yield
+        spy = self.asset_factory.make_asset("SPY")
+        self.assertTrue(numpy.isclose(spy.average_yield(), .00462926))
 
 if __name__ == '__main__':
     unittest.main()

@@ -26,28 +26,33 @@ class Asset(object):
     def price(self, date):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
         #TODO: use financial datetime library to elevate key errors on weekends and non trading dates
+        #TODO: find better way to report error to avoid stack overflow if time is before or after what's available in the data
 
         try:
             return self._data_cache[self._symbol]["price"][date]["Close"]
         except KeyError:
-#            print date
             return self.price(date - datetime.timedelta(1))
 
-    def adj_price(self, date):
+    def _adj_price(self, date):
+        """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural 
+            algorithms are accurate. """
+        #TODO: do same check as above - throw good error on key missing
         try:
             return self._data_cache[self._symbol]["price"][date]["Adjusted Close"]
         except KeyError:
-            return self.adj_price(date - datetime.timedelta(1))
+            return self._adj_price(date - datetime.timedelta(1))
 
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
             This is not annualized! """
         dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues()]
         yields = [div["Dividend"] / self.price(div["Date"]) for div in dividends]
+
         return numpy.average(yields)
 
     def average_dividend_period(self):
         """ Returns the average period between dividend dispersals for this asset """
+        #TODO: needs test
         dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues()]
         dates = sorted([div["Date"] for div in dividends])
         average_days_period = [(later - earlier).days for (earlier, later) in zip(dates[:-1], dates[1:])]
@@ -56,12 +61,14 @@ class Asset(object):
     def yield_between(self, begin, end):
         """ Returns the dividend yield (raw dividends / share price at the time) between begin and end """
         #TODO: check range boundries. do we want to count dividend as <= ... < or < ... <=?
+        #TODO: test
         
         dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues() if begin < div["Date"] <= end]
         return reduce(operator.mul, [1.0 + (div["Dividend"] / self.price(div["Date"])) for div in dividends], 1.0) - 1.0
 
     def yield_accrued(self, date):
         """ Returns the yield accrued to this asset at date. Accrued means the dividend is owed to us, but hasn't been dispersed yet """
+        #TODO: test, and simplify if possible.
         dividends = sorted([div for div in self._data_cache[self._symbol]["dividends"].itervalues()],
                            key=lambda d: d["Date"])
         try:
@@ -83,19 +90,8 @@ class Asset(object):
         proportion_accrued = float(days_in.days) / float(days_between.days)
         return proportion_accrued * (next_dividend["Dividend"] / self.price(date))
 
-
-    def trailing_yield(self, date):
-        """ The trailing one year yield of this asset's dividends and interest payments """
-        return self.trailing_dividend(date) / self.price(date)
-
-    def trailing_dividend(self, date):
-        """ Trailing one year's total raw dividend """
-
-        dividends = sorted(self._data_cache[self._symbol]["dividends"].itervalues(), key=lambda d: d["Date"])
-        one_year_ago = date - datetime.timedelta(365)
-        assert min(d["Date"] for d in dividends < one_year_ago), "Must have at least one years worth of data!"
-        return sum(d["Dividend"] for d in dividends if one_year_ago < d["Date"] <= date)
-
+#TODO: pull yahoo stuff out into yahoo subsection of data module
+#TODO: and put asset into asset subsection of data module
 def make_price_line(line):
     """ Creates a data structure from a line from a yahoo csv file """
     #TODO: probably put into data frame format
