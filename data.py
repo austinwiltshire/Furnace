@@ -52,7 +52,6 @@ class Asset(object):
 
     def average_dividend_period(self):
         """ Returns the average period between dividend dispersals for this asset """
-        #TODO: needs test
         dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues()]
         dates = sorted([div["Date"] for div in dividends])
         average_days_period = [(later - earlier).days for (earlier, later) in zip(dates[:-1], dates[1:])]
@@ -60,15 +59,17 @@ class Asset(object):
 
     def yield_between(self, begin, end):
         """ Returns the dividend yield (raw dividends / share price at the time) between begin and end """
-        #TODO: check range boundries. do we want to count dividend as <= ... < or < ... <=?
-        #TODO: test
-        
-        dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues() if begin < div["Date"] <= end]
-        return reduce(operator.mul, [1.0 + (div["Dividend"] / self.price(div["Date"])) for div in dividends], 1.0) - 1.0
+        assert begin <= end, "Beginning date should happen before or during end date"
+
+        dividends = self._data_cache[self._symbol]["dividends"].itervalues()
+        dividends_in_range = [div for div in dividends if begin < div["Date"] <= end]
+        yields = [div["Dividend"] / self.price(div["Date"]) for div in dividends_in_range]
+        return reduce(operator.mul, [1.0 + yield_ for yield_ in yields], 1.0) - 1.0
 
     def yield_accrued(self, date):
-        """ Returns the yield accrued to this asset at date. Accrued means the dividend is owed to us, but hasn't been dispersed yet """
-        #TODO: test, and simplify if possible.
+        """ Returns the yield accrued to this asset at date.
+            Accrued means the dividend is owed to us, but hasn't been dispersed yet """
+        #TODO: simplify if possible
         dividends = sorted([div for div in self._data_cache[self._symbol]["dividends"].itervalues()],
                            key=lambda d: d["Date"])
         try:
@@ -77,13 +78,22 @@ class Asset(object):
             #next dividend not found.
             past_dividend = next(div for div in reversed(dividends) if date > div["Date"])
             days_in = (date - past_dividend["Date"]).days
+            if days_in - self.average_dividend_period() > 0.0:
+                #we're too far out to make estimates
+                raise Exception("Too late to estimate dividends")
             return (days_in / self.average_dividend_period()) * self.average_yield()
         try:
-            past_dividend = next(div for div in reversed(dividends) if date > div["Date"])
+            #past dividends count today ( the greater than or equals) because today would be picked up by the yield
+            #between
+            past_dividend = next(div for div in reversed(dividends) if date >= div["Date"])
         except StopIteration:
             #past dividend not found
-            days_in = max(self.average_dividend_period() - (next_dividend["Date"] - date).days, 1)
-            return (days_in / self.average_dividend_period()) * self.average_yield()
+            days_in = (next_dividend["Date"] - date).days
+            proportion_dividend_earned = self.average_dividend_period() - days_in
+            if proportion_dividend_earned < 0.0:
+                #we're too far out to make estimates. Just throw
+                raise Exception("Too early to estimate dividends")
+            return (proportion_dividend_earned / self.average_dividend_period()) * self.average_yield()
 
         days_between = next_dividend["Date"] - past_dividend["Date"]
         days_in = next_dividend["Date"] - date

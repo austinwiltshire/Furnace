@@ -91,5 +91,43 @@ class TestAsset(unittest.TestCase):
         spy = self.asset_factory.make_asset("SPY")
         self.assertTrue(numpy.isclose(spy.average_yield(), .00462926))
 
+    def test_average_period(self):
+        """ REGRESSION tests the average period of SPY is around 3 months """
+
+        spy = self.asset_factory.make_asset("SPY")
+        self.assertTrue(numpy.isclose(spy.average_dividend_period(), 89.54167))
+
+    def test_yield_between(self):
+        """ Tests the total compound yield of SPY between 2002-1-1 and 2002-12-31 is 1.58%. This has been hand
+            calculated"""
+
+        spy = self.asset_factory.make_asset("SPY")
+        self.assertTrue(numpy.isclose(spy.yield_between(datetime.date(2002, 1, 1), datetime.date(2002, 12, 31)),
+                                      0.0158111178))
+
+    def test_yield_accrued_middle(self):
+        """ Tests the yield accrued on 2006-05-01 for the SPY is .215% . This has been hand calculated """
+
+        spy = self.asset_factory.make_asset("SPY")
+        self.assertTrue(numpy.isclose(spy.yield_accrued(datetime.date(2006, 5, 1)), 0.002151452))
+
+    def test_yield_accrued_end(self):
+        """ At the end, we estimate yield by number of days since last dividend times the average yield.
+            This was hand calculated """
+
+        spy = self.asset_factory.make_asset("SPY")
+        #last dividend issued on 12-21-12 in data set, making this 41 / average period days in.
+        self.assertTrue(numpy.isclose(spy.yield_accrued(datetime.date(2013, 1, 31)), 0.0021196792))
+
+    def test_yield_accrued_early(self):
+        """ If we're within one average period of the first dividend, we take the proportion of that that we've
+            earned. Hand calculated """
+
+        spy = self.asset_factory.make_asset("SPY")
+
+        #2001, 2, 1 occurs 43, so average_period - 43 / average period is dividend i've earned
+        self.assertTrue(numpy.isclose(spy.yield_accrued(datetime.date(2001, 2, 1)),
+                        0.0024061812926227))
+
 if __name__ == '__main__':
     unittest.main()
