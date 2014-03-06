@@ -30,7 +30,7 @@ class TestBuyAndHold(unittest.TestCase):
         self.assertTrue(numpy.isclose(performance_.CAGR(), 1.02763283748, 1e-11, 1e-11))
 
     def test_index_index(self):
-        """ Tests indexing a strategy with a base index """
+        """ Regression Tests indexing a strategy with a base index """
 
         #TODO: should i grab begin and end from the data cache?
         begin = datetime.date(2001, 1, 2)
@@ -40,7 +40,7 @@ class TestBuyAndHold(unittest.TestCase):
        
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2001, 1, 2), 100), 100))
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2001, 2, 1), 100), 107.3378))
-        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2002, 1, 2), 100), 91.0677))
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2002, 1, 2), 100), 90.881805))
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2012, 12, 31), 100), 138.7037))
 
 class TestBondsAndStocks(unittest.TestCase):
@@ -73,8 +73,8 @@ class TestBondsAndStocks(unittest.TestCase):
         #TODO: refactor the commonality out of tehse tests
         #TODO: this check below should always be true, i.e., index on start date is always 100
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2003, 1, 2), 100), 100))
-        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2003, 2, 1), 100), 96.3109))
-        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2004, 1, 2), 100), 121.0233))
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2003, 2, 1), 100), 96.2944))
+        self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2004, 1, 2), 100), 120.7003))
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2012, 12, 31), 100), 189.6545))
 
 class TestAsset(unittest.TestCase):
@@ -109,7 +109,7 @@ class TestAsset(unittest.TestCase):
         """ Tests the yield accrued on 2006-05-01 for the SPY is .215% . This has been hand calculated """
 
         spy = self.asset_factory.make_asset("SPY")
-        self.assertTrue(numpy.isclose(spy.yield_accrued(datetime.date(2006, 5, 1)), 0.002151452))
+        self.assertTrue(numpy.isclose(spy.yield_accrued(datetime.date(2006, 5, 1)), 0.002104682))
 
     def test_yield_accrued_end(self):
         """ At the end, we estimate yield by number of days since last dividend times the average yield.

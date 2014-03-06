@@ -23,6 +23,11 @@ class Asset(object):
         self._symbol = symbol
         self._data_cache = data_cache
 
+    def _dividends(self):
+        """ List of all available dividends """
+        return sorted([div for div in self._data_cache[self._symbol]["dividends"].itervalues()],
+                      key=lambda d: d["Date"])
+
     def price(self, date):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
         #TODO: use financial datetime library to elevate key errors on weekends and non trading dates
@@ -34,7 +39,7 @@ class Asset(object):
             return self.price(date - datetime.timedelta(1))
 
     def _adj_price(self, date):
-        """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural 
+        """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural
             algorithms are accurate. """
         #TODO: do same check as above - throw good error on key missing
         try:
@@ -45,15 +50,13 @@ class Asset(object):
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
             This is not annualized! """
-        dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues()]
-        yields = [div["Dividend"] / self.price(div["Date"]) for div in dividends]
+        yields = [div["Dividend"] / self.price(div["Date"]) for div in self._dividends()]
 
         return numpy.average(yields)
 
     def average_dividend_period(self):
         """ Returns the average period between dividend dispersals for this asset """
-        dividends = [div for div in self._data_cache[self._symbol]["dividends"].itervalues()]
-        dates = sorted([div["Date"] for div in dividends])
+        dates = [div["Date"] for div in self._dividends()]
         average_days_period = [(later - earlier).days for (earlier, later) in zip(dates[:-1], dates[1:])]
         return numpy.average(average_days_period)
 
@@ -61,44 +64,46 @@ class Asset(object):
         """ Returns the dividend yield (raw dividends / share price at the time) between begin and end """
         assert begin <= end, "Beginning date should happen before or during end date"
 
-        dividends = self._data_cache[self._symbol]["dividends"].itervalues()
-        dividends_in_range = [div for div in dividends if begin < div["Date"] <= end]
+        dividends_in_range = [div for div in self._dividends() if begin < div["Date"] <= end]
         yields = [div["Dividend"] / self.price(div["Date"]) for div in dividends_in_range]
         return reduce(operator.mul, [1.0 + yield_ for yield_ in yields], 1.0) - 1.0
+
+    def _expected_daily_accrued_yield(self):
+        """ Returns the expected daily, non compounded, yield of this asset """
+        return self.average_yield() / self.average_dividend_period()
+
+    def _estimate_yield_accrued(self, next_dividend, past_dividend, date):
+        """ Estimates the yield accrued between dividends when one is not available """
+        assert not (next_dividend and past_dividend)
+
+        days_in = ((date - past_dividend["Date"]).days
+                   if not next_dividend
+                   else self.average_dividend_period() - (next_dividend["Date"] - date).days)
+
+        if days_in > self.average_dividend_period() or days_in < 0.0:
+            raise Exception("Too late or early to estimate dividends")
+
+        return days_in * self._expected_daily_accrued_yield()
+
+    def _calculate_yield_accrued(self, next_dividend, past_dividend, date):
+        """ Calculates the portion of the dividend yield accrued on date assuming both dividends are valid """
+        assert next_dividend and past_dividend
+
+        days_between = float((next_dividend["Date"] - past_dividend["Date"]).days)
+        yield_ = next_dividend["Dividend"] / self.price(date)
+        days_in = float((date - past_dividend["Date"]).days)
+
+        return days_in / days_between * yield_
 
     def yield_accrued(self, date):
         """ Returns the yield accrued to this asset at date.
             Accrued means the dividend is owed to us, but hasn't been dispersed yet """
-        #TODO: simplify if possible
-        dividends = sorted([div for div in self._data_cache[self._symbol]["dividends"].itervalues()],
-                           key=lambda d: d["Date"])
-        try:
-            next_dividend = next(div for div in dividends if date < div["Date"])
-        except StopIteration:
-            #next dividend not found.
-            past_dividend = next(div for div in reversed(dividends) if date > div["Date"])
-            days_in = (date - past_dividend["Date"]).days
-            if days_in - self.average_dividend_period() > 0.0:
-                #we're too far out to make estimates
-                raise Exception("Too late to estimate dividends")
-            return (days_in / self.average_dividend_period()) * self.average_yield()
-        try:
-            #past dividends count today ( the greater than or equals) because today would be picked up by the yield
-            #between
-            past_dividend = next(div for div in reversed(dividends) if date >= div["Date"])
-        except StopIteration:
-            #past dividend not found
-            days_in = (next_dividend["Date"] - date).days
-            proportion_dividend_earned = self.average_dividend_period() - days_in
-            if proportion_dividend_earned < 0.0:
-                #we're too far out to make estimates. Just throw
-                raise Exception("Too early to estimate dividends")
-            return (proportion_dividend_earned / self.average_dividend_period()) * self.average_yield()
+        next_dividend = next((div for div in self._dividends() if date < div["Date"]), None)
+        past_dividend = next((div for div in reversed(self._dividends()) if date >= div["Date"]), None)
 
-        days_between = next_dividend["Date"] - past_dividend["Date"]
-        days_in = next_dividend["Date"] - date
-        proportion_accrued = float(days_in.days) / float(days_between.days)
-        return proportion_accrued * (next_dividend["Dividend"] / self.price(date))
+        return (self._calculate_yield_accrued(next_dividend, past_dividend, date)
+                if next_dividend and past_dividend
+                else self._estimate_yield_accrued(next_dividend, past_dividend, date))
 
 #TODO: pull yahoo stuff out into yahoo subsection of data module
 #TODO: and put asset into asset subsection of data module
