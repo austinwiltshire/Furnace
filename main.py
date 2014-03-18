@@ -1,6 +1,6 @@
 """ A utility file for rapid prototyping """
 import performance
-import data
+from data import yahoo, asset
 import datetime
 import strategy
 
@@ -8,9 +8,9 @@ def main():
     """ Whatever is being prototyped can be put in here """
     furnace = performance.Furnace()
 
-    data_cache = data.load()
+    data_cache = yahoo.load()
 
-    asset_factory = data.AssetFactory(data_cache)
+    asset_factory = asset.AssetFactory(data_cache)
     begin = datetime.date(2003, 1, 2)
     end = datetime.date(2012, 12, 31)
     stocks_and_bonds = strategy.BuyAndHoldStocksAndBonds(asset_factory, begin)

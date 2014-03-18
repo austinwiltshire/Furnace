@@ -5,7 +5,7 @@
 
 import unittest
 import datetime
-import data
+from data import asset, yahoo
 import performance
 import strategy
 import numpy
@@ -16,8 +16,8 @@ class TestBuyAndHold(unittest.TestCase):
     def setUp(self):
         """ Initialize fixture """
         self.furnace = performance.Furnace()
-        self.data_cache = data.load() 
-        self.asset_factory = data.AssetFactory(self.data_cache)
+        self.data_cache = yahoo.load() 
+        self.asset_factory = asset.AssetFactory(self.data_cache)
 
     def test_buy_and_hold(self):
         """ Tests the simplest buy and hold strategy """
@@ -37,7 +37,7 @@ class TestBuyAndHold(unittest.TestCase):
         end = datetime.date(2012, 12, 31)
         strat = strategy.BuyAndHoldStocks(self.asset_factory, datetime.date(2001, 1, 2))
         performance_ = self.furnace.fire(strat, begin, end)
-       
+
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2001, 1, 2), 100), 100))
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2001, 2, 1), 100), 107.3378))
         self.assertTrue(numpy.isclose(performance_.index_on(datetime.date(2002, 1, 2), 100), 90.881805))
@@ -49,8 +49,8 @@ class TestBondsAndStocks(unittest.TestCase):
     def setUp(self):
         """ Initialize fixture """
         self.furnace = performance.Furnace()
-        self.data_cache = data.load() 
-        self.asset_factory = data.AssetFactory(self.data_cache)
+        self.data_cache = yahoo.load()
+        self.asset_factory = asset.AssetFactory(self.data_cache)
 
     def test_buy_and_hold(self):
         """ REGRESSION tests mixed portfolio """
@@ -81,8 +81,8 @@ class TestAsset(unittest.TestCase):
     """ Tests the asset class """
     def setUp(self):
         """ Load in data cache """
-        self.data_cache = data.load()
-        self.asset_factory = data.AssetFactory(self.data_cache)
+        self.data_cache = yahoo.load()
+        self.asset_factory = asset.AssetFactory(self.data_cache)
 
     def test_average_yield(self):
         """ REGRESSION Tests the average yield of SPY is each dividend divided by the price on the dividiend issue
