@@ -3,7 +3,7 @@ A financial calendaring module using dateutil
 """
 
 import datetime
-from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR, SA, SU
+from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
 
 def nth_trading_day_after(a_date, nth):
     """ Finds the nth trading day after aDate.  Takes into account holidays and weekends. """
@@ -28,7 +28,7 @@ def nth_trading_day_before(a_date, nth):
         if a_date in ALL_TRADING_DAYS:
             return a_date
         else:
-            return ALL_TRADING_DAYS.after(a_date)
+            return ALL_TRADING_DAYS.before(a_date)
 
     for _ in range(nth):
         trial_date = ALL_TRADING_DAYS.before(trial_date)
