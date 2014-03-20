@@ -3,7 +3,7 @@ Test the fcalendar module
 """
 
 import unittest
-from Furnace.data import fcalendar
+from furnace.data import fcalendar
 import datetime
 
 class TestFcalendar(unittest.TestCase):

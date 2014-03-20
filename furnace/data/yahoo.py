@@ -37,5 +37,7 @@ def load_dividend_csv_file(filename):
 def load():
     """ Loads the yahoo spy csv file
         Note: these files need to be located in the data or root directory """
-    return {"SPY" : {"price" : load_price_csv_file("spy.csv"), "dividends" : load_dividend_csv_file("spy_div.csv")},
-            "LQD" : {"price" : load_price_csv_file("lqd.csv"), "dividends" : load_dividend_csv_file("lqd_div.csv")}}
+    return {"SPY" : {"price" : load_price_csv_file("data/spy.csv"),
+                     "dividends" : load_dividend_csv_file("data/spy_div.csv")},
+            "LQD" : {"price" : load_price_csv_file("data/lqd.csv"),
+                     "dividends" : load_dividend_csv_file("data/lqd_div.csv")}}
