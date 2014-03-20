@@ -5,9 +5,8 @@
 
 import unittest
 import datetime
-from data import asset, yahoo
-import performance
-import strategy
+from furnace.data import asset, yahoo
+from furnace import performance, strategy
 import numpy
 
 class TestBuyAndHold(unittest.TestCase):
@@ -16,7 +15,7 @@ class TestBuyAndHold(unittest.TestCase):
     def setUp(self):
         """ Initialize fixture """
         self.furnace = performance.Furnace()
-        self.data_cache = yahoo.load() 
+        self.data_cache = yahoo.load()
         self.asset_factory = asset.AssetFactory(self.data_cache)
 
     def test_buy_and_hold(self):
