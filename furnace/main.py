@@ -11,8 +11,8 @@ def main():
     data_cache = yahoo.load()
 
     asset_factory = asset.AssetFactory(data_cache)
-    begin = datetime.date(2003, 1, 2)
-    end = datetime.date(2012, 12, 31)
+    begin = datetime.datetime(2003, 1, 2)
+    end = datetime.datetime(2012, 12, 31)
     stocks_and_bonds = strategy.BuyAndHoldStocksAndBonds(asset_factory, begin)
     stocks_and_bonds_perf = furnace.fire(stocks_and_bonds, begin, end)
 

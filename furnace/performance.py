@@ -9,6 +9,7 @@ import datetime
 import numpy
 import operator
 import portfolio
+from furnace.data import fcalendar
 import matplotlib.pyplot as plt
 
 class Furnace(object):
@@ -60,7 +61,8 @@ class OverallPerformance(object):
 
     def plot_index(self, index_base=100.0):
         """ Plots a day by day performance on a matplotlib chart """
-        dates = [self.begin() + datetime.timedelta(day) for day in range(self.days() + 1)]
+
+        dates = [date for date in fcalendar.build_trading_date_rule(self.begin())]
         values = [self.index_on(day, index_base) for day in dates]
 
         plt.plot(numpy.array(dates), numpy.array(values))

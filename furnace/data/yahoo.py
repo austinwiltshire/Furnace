@@ -6,7 +6,7 @@ import csv
 def make_price_line(line):
     """ Creates a data structure from a line from a yahoo csv file """
     #TODO: probably put into data frame format
-    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d").date(),
+    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d"),
             "Open":float(line[1]),
             "High":float(line[2]),
             "Low":float(line[3]),
@@ -26,7 +26,7 @@ def load_price_csv_file(filename):
 
 def make_dividend_line(line):
     """ Parses a dividend line from a yahoo dividend csv file """
-    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d").date(),
+    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d"),
             "Dividend":float(line[1])}
 
 def load_dividend_csv_file(filename):

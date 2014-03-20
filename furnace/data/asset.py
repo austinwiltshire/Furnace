@@ -6,6 +6,7 @@
 import datetime
 import operator
 import numpy
+from furnace.data import fcalendar
 
 class AssetFactory(object):
     def __init__(self, data_cache):
@@ -42,22 +43,19 @@ class Asset(object):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
         #TODO: use financial datetime library to elevate key errors on weekends and non trading dates
 
-        if not self._first_price_date() <= date <= self._last_price_date():
-            raise Exception("Date not available for " + str(self._symbol) + " " + str(date))
+        assert date in fcalendar.ALL_TRADING_DAYS
+        assert self._first_price_date() <= date <= self._last_price_date()
 
-        return (self._data_cache[self._symbol]["price"][date]["Close"]
-                if date in self._data_cache[self._symbol]["price"]
-                else self.price(date - datetime.timedelta(1)))
+        return self._data_cache[self._symbol]["price"][date]["Close"]
 
     def _adj_price(self, date):
         """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural
             algorithms are accurate. """
-        if not self._first_price_date() <= date <= self._last_price_date():
-            raise Exception("Date not available for " + str(self._symbol) + " " + str(date))
 
-        return (self._data_cache[self._symbol]["price"][date]["Adjusted Close"]
-                if date in self._data_cache[self._symbol]["price"]
-                else self.price(date - datetime.timedelta(1)))
+        assert date in fcalendar.ALL_TRADING_DAYS
+        assert self._first_price_date() <= date <= self._last_price_date()
+
+        return self._data_cache[self._symbol]["price"][date]["Adjusted Close"]
 
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
