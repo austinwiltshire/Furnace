@@ -6,6 +6,7 @@ import unittest
 from furnace.data import fcalendar
 import datetime
 
+#pylint: disable=R0904
 class TestFcalendar(unittest.TestCase):
     """ Test various dates in the financial calendaring system """
 
@@ -33,7 +34,9 @@ class TestFcalendar(unittest.TestCase):
         self.assertTrue(datetime.datetime(2004, 5, 18) in self.trading_dates)
         self.assertTrue(datetime.datetime(2004, 5, 19) in self.trading_dates)
         self.assertTrue(datetime.datetime(2004, 5, 20) in self.trading_dates)
+#pylint: enable=R0904
 
+#pylint: disable=R0904
 class TestFcalendarHelpers(unittest.TestCase):
     """ Test the before and after helpers """
 
@@ -55,6 +58,7 @@ class TestFcalendarHelpers(unittest.TestCase):
         self.assertTrue(fcalendar.nth_trading_day_before(date(2006, 7, 7), 3) == date(2006, 7, 3))
         self.assertTrue(fcalendar.nth_trading_day_before(date(2006, 7, 7), 0) == date(2006, 7, 7))
         self.assertTrue(fcalendar.nth_trading_day_before(date(2006, 7, 8), 0) == date(2006, 7, 7))
+#pylint: enable=R0904
 
 if __name__ == '__main__':
     unittest.main()

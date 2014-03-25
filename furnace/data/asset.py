@@ -3,7 +3,6 @@
     an asset might be better looked at as a table, rather than a pure OO abstraction. It represents all price data,
     not just one day's worth """
 
-import datetime
 import operator
 import numpy
 from furnace.data import fcalendar
@@ -41,7 +40,6 @@ class Asset(object):
 
     def price(self, date):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
-        #TODO: use financial datetime library to elevate key errors on weekends and non trading dates
 
         assert date in fcalendar.ALL_TRADING_DAYS
         assert self._first_price_date() <= date <= self._last_price_date()
@@ -51,7 +49,6 @@ class Asset(object):
     def _adj_price(self, date):
         """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural
             algorithms are accurate. """
-
         assert date in fcalendar.ALL_TRADING_DAYS
         assert self._first_price_date() <= date <= self._last_price_date()
 
@@ -60,12 +57,13 @@ class Asset(object):
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
             This is not annualized! """
+            
         yields = [div["Dividend"] / self.price(div["Date"]) for div in self._dividends()]
-
         return numpy.average(yields)
 
     def average_dividend_period(self):
         """ Returns the average period between dividend dispersals for this asset """
+
         dates = [div["Date"] for div in self._dividends()]
         average_days_period = [(later - earlier).days for (earlier, later) in zip(dates[:-1], dates[1:])]
         return numpy.average(average_days_period)
