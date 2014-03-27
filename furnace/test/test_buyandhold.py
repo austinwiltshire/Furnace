@@ -16,7 +16,8 @@ class TestBuyAndHold(unittest.TestCase):
         """ Initialize fixture """
         self.furnace = performance.Furnace()
         self.data_cache = yahoo.load()
-        self.asset_factory = asset.AssetFactory(self.data_cache)
+        self._data_cache_pandas = yahoo.load_pandas()
+        self.asset_factory = asset.AssetFactory(self.data_cache, self._data_cache_pandas)
 
     def test_buy_and_hold(self):
         """ Tests the simplest buy and hold strategy """
@@ -49,7 +50,8 @@ class TestBondsAndStocks(unittest.TestCase):
         """ Initialize fixture """
         self.furnace = performance.Furnace()
         self.data_cache = yahoo.load()
-        self.asset_factory = asset.AssetFactory(self.data_cache)
+        self._data_cache_pandas = yahoo.load_pandas()
+        self.asset_factory = asset.AssetFactory(self.data_cache, self._data_cache_pandas)
 
     def test_buy_and_hold(self):
         """ REGRESSION tests mixed portfolio """
@@ -81,7 +83,8 @@ class TestAsset(unittest.TestCase):
     def setUp(self):
         """ Load in data cache """
         self.data_cache = yahoo.load()
-        self.asset_factory = asset.AssetFactory(self.data_cache)
+        self._data_cache_pandas = yahoo.load_pandas()
+        self.asset_factory = asset.AssetFactory(self.data_cache, self._data_cache_pandas)
 
     def test_average_yield(self):
         """ REGRESSION Tests the average yield of SPY is each dividend divided by the price on the dividiend issue

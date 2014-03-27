@@ -2,6 +2,7 @@
 
 import datetime
 import csv
+import pandas
 
 def make_price_line(line):
     """ Creates a data structure from a line from a yahoo csv file """
@@ -34,6 +35,12 @@ def load_dividend_csv_file(filename):
     dividend_lines = [make_dividend_line(line) for line in load_yahoo_csv_file(filename)]
     return dict([(dividend_line["Date"], dividend_line) for dividend_line in dividend_lines])
 
+def load_pandas():
+    """ Loads required data files. Experimental """
+    return {"SPY" : {"price" : pandas.read_csv("data/spy.csv", index_col="Date", parse_dates=True),
+                     "dividends" : pandas.read_csv("data/spy_div.csv", index_col="Date", parse_dates=True)},
+            "LQD" : {"price" : pandas.read_csv("data/lqd.csv", index_col="Date", parse_dates=True),
+                     "dividends" : pandas.read_csv("data/lqd_div.csv", index_col="Date", parse_dates=True)}}
 def load():
     """ Loads the yahoo spy csv file
         Note: these files need to be located in the data or root directory """
