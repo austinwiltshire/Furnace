@@ -7,6 +7,7 @@ import operator
 import numpy
 from furnace.data import fcalendar
 import pandas
+import datetime
 
 class AssetFactory(object):
     def __init__(self, data_cache, data_cache_pandas):
@@ -28,9 +29,9 @@ class Asset(object):
         return sorted([div for div in self._data_cache[self._symbol]["dividends"].itervalues()],
                           key=lambda d: d["Date"])
 
-    def _dividends_pandas(self):
-        """ List of available dividends in pandas format """
-        return self._data_cache_pandas[self._symbol]["dividends"]
+    def _all_pandas(self):
+        """ A concatenated list of dividends and prices in pandas format """
+        return self._data_cache_pandas[self._symbol]["all"]
 
     def _price_dates_available(self):
         """ List of all dates available for this asset's price data """
@@ -52,10 +53,6 @@ class Asset(object):
 
         return self._data_cache[self._symbol]["price"][date]["Close"]
 
-    def prices_pandas(self):
-        """ Returns price in pandas format """
-        return self._data_cache_pandas[self._symbol]["price"]
-
     def _adj_price(self, date):
         """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural
             algorithms are accurate. """
@@ -67,31 +64,24 @@ class Asset(object):
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
             This is not annualized! """
-            
+
         yields = [div["Dividend"] / self.price(div["Date"]) for div in self._dividends()]
         return numpy.average(yields)
 
     def average_dividend_period(self):
-        """ Returns the average period between dividend dispersals for this asset """
+        """ Returns the average period between dividends dispersals for this asset in days"""
 
-        dates = [div["Date"] for div in self._dividends()]
-        average_days_period = [(later - earlier).days for (earlier, later) in zip(dates[:-1], dates[1:])]
-        return numpy.average(average_days_period)
+        day = numpy.timedelta64(datetime.timedelta(1))
+        average_period = numpy.average(self._all_pandas()["Dividends"].dropna().index.to_series().diff(1).dropna())
+        return average_period / day
 
     def yield_between(self, begin, end):
         """ Returns the dividend yield (raw dividends / share price at the time) between begin and end """
         assert begin <= end, "Beginning date should happen before or during end date"
 
-        div = self._dividends_pandas()
-        div = div[div.index > begin]
-        div = div[div.index <= end]
-        #TODO:
-        #put all data for a stock symbol in this format:
-        #div = self._dividends_pandas()
-        #prices = self._prices_pandas()
-        #pandas.concat([div,prices],axis=1)
-        yields = div["Dividends"] / self.prices_pandas()["Close"]
-        yields = yields[pandas.notnull(yields)] + 1.0
+        dividends = self._all_pandas()[["Dividends", "Close"]].dropna()
+        clamped_dividends = dividends[(dividends.index > begin) & (dividends.index <= end)]
+        yields = (clamped_dividends["Dividends"] / clamped_dividends["Close"]) + 1.0
         return reduce(operator.mul, yields, 1.0) - 1.0
 
 #        import code

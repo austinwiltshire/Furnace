@@ -37,10 +37,14 @@ def load_dividend_csv_file(filename):
 
 def load_pandas():
     """ Loads required data files. Experimental """
-    return {"SPY" : {"price" : pandas.read_csv("data/spy.csv", index_col="Date", parse_dates=True),
-                     "dividends" : pandas.read_csv("data/spy_div.csv", index_col="Date", parse_dates=True)},
-            "LQD" : {"price" : pandas.read_csv("data/lqd.csv", index_col="Date", parse_dates=True),
-                     "dividends" : pandas.read_csv("data/lqd_div.csv", index_col="Date", parse_dates=True)}}
+    pandas_data = {"SPY" : {"price" : pandas.read_csv("data/spy.csv", index_col="Date", parse_dates=True),
+                            "dividends" : pandas.read_csv("data/spy_div.csv", index_col="Date", parse_dates=True)},
+                   "LQD" : {"price" : pandas.read_csv("data/lqd.csv", index_col="Date", parse_dates=True),
+                            "dividends" : pandas.read_csv("data/lqd_div.csv", index_col="Date", parse_dates=True)}}
+    for key in pandas_data.keys():
+        pandas_data[key]["all"] = pandas.concat([pandas_data[key]["price"], pandas_data[key]["dividends"]], axis=1)
+    return pandas_data
+
 def load():
     """ Loads the yahoo spy csv file
         Note: these files need to be located in the data or root directory """
