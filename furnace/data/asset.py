@@ -65,8 +65,8 @@ class Asset(object):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
             This is not annualized! """
 
-        yields = [div["Dividend"] / self.price(div["Date"]) for div in self._dividends()]
-        return numpy.average(yields)
+        dividends = self._all_pandas()[["Dividends", "Close"]].dropna()
+        return numpy.average(dividends["Dividends"] / dividends["Close"])
 
     def average_dividend_period(self):
         """ Returns the average period between dividends dispersals for this asset in days"""
