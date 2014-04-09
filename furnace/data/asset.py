@@ -53,17 +53,9 @@ class Asset(object):
 
         return self._data_cache[self._symbol]["price"][date]["Close"]
 
-    def _adj_price(self, date):
-        """ A helper method to get yahoo's adjusted price out of the data. Useful for testing that dividend accural
-            algorithms are accurate. """
-        assert date in fcalendar.ALL_TRADING_DAYS
-        assert self._first_price_date() <= date <= self._last_price_date()
-
-        return self._data_cache[self._symbol]["price"][date]["Adjusted Close"]
-
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
-            This is not annualized! """
+            This is not annualized, nor is it geometric! """
 
         dividends = self._all_pandas()[["Dividends", "Close"]].dropna()
         return numpy.average(dividends["Dividends"] / dividends["Close"])
@@ -84,19 +76,29 @@ class Asset(object):
         yields = (clamped_dividends["Dividends"] / clamped_dividends["Close"]) + 1.0
         return reduce(operator.mul, yields, 1.0) - 1.0
 
-#        import code
-#        code.interact(local=locals())
-
     def _expected_daily_accrued_yield(self):
         """ Returns the expected daily, non compounded, yield of this asset """
         return self.average_yield() / self.average_dividend_period()
 
+    def _calculate_yield_accrued(self, next_dividend, past_dividend, date):
+        """ Calculates the portion of the dividend yield accrued on date assuming both dividends are valid """
+        assert not (next_dividend.empty or past_dividend.empty)
+
+        days_between = float((next_dividend["Date"] - past_dividend["Date"]).days)
+        yield_ = next_dividend["Dividends"] / self._all_pandas().ix[date]["Close"]
+        days_in = float((date - past_dividend["Date"]).days)
+
+#        import code
+#        code.interact(local=locals())
+
+        return days_in / days_between * yield_
+
     def _estimate_yield_accrued(self, next_dividend, past_dividend, date):
         """ Estimates the yield accrued between dividends when one is not available """
-        assert not (next_dividend and past_dividend)
+        assert next_dividend.empty or past_dividend.empty
 
         days_in = ((date - past_dividend["Date"]).days
-                   if not next_dividend
+                   if next_dividend.empty
                    else self.average_dividend_period() - (next_dividend["Date"] - date).days)
 
         if days_in > self.average_dividend_period() or days_in < 0.0:
@@ -104,22 +106,20 @@ class Asset(object):
 
         return days_in * self._expected_daily_accrued_yield()
 
-    def _calculate_yield_accrued(self, next_dividend, past_dividend, date):
-        """ Calculates the portion of the dividend yield accrued on date assuming both dividends are valid """
-        assert next_dividend and past_dividend
-
-        days_between = float((next_dividend["Date"] - past_dividend["Date"]).days)
-        yield_ = next_dividend["Dividend"] / self.price(date)
-        days_in = float((date - past_dividend["Date"]).days)
-
-        return days_in / days_between * yield_
-
     def yield_accrued(self, date):
-        """ Returns the yield accrued to this asset at date.
-            Accrued means the dividend is owed to us, but hasn't been dispersed yet """
-        next_dividend = next((div for div in self._dividends() if date < div["Date"]), None)
-        past_dividend = next((div for div in reversed(self._dividends()) if date >= div["Date"]), None)
+        """ Returns the yield accrued to this asset to date. Accrued means dividend is owed to us but has not
+        been dispersed yet."""
+
+        one_day = datetime.timedelta(1)
+
+        #NOTE: past_dividend is inclusive, i.e., if today is dividend issue date, we consider it past.
+        next_dividend = self._all_pandas()["Dividends"].dropna().ix[date+one_day:].reset_index()
+        if not next_dividend.empty:
+            next_dividend = next_dividend.iloc[0]
+        past_dividend = self._all_pandas()["Dividends"].dropna().ix[:date].reset_index()
+        if not past_dividend.empty:
+            past_dividend = past_dividend.iloc[-1]
 
         return (self._calculate_yield_accrued(next_dividend, past_dividend, date)
-                if next_dividend and past_dividend
+                if not next_dividend.empty and not past_dividend.empty
                 else self._estimate_yield_accrued(next_dividend, past_dividend, date))

@@ -3,6 +3,7 @@ import performance
 from data import yahoo, asset
 import datetime
 import strategy
+import numpy
 
 def main():
     """ Whatever is being prototyped can be put in here """
