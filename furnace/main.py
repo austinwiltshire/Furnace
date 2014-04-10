@@ -9,7 +9,6 @@ def main():
     """ Whatever is being prototyped can be put in here """
     furnace = performance.Furnace()
 
-    data_cache = yahoo.load()
     data_cache_pandas = yahoo.load_pandas()
 
     asset_factory = asset.AssetFactory(data_cache, data_cache_pandas)

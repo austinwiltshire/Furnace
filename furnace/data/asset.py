@@ -6,16 +6,19 @@
 import operator
 import numpy
 from furnace.data import fcalendar
-import pandas
 import datetime
 
+# pylint: disable=R0903
+#NOTE: not enough public methods as of now
 class AssetFactory(object):
+    """ Produces assets """
     def __init__(self, data_cache):
         self._data_cache = data_cache
 
     def make_asset(self, symbol):
         """ Creates an asset based on the ticker symbol """
-        return Asset(symbol, self._data_cache)
+        return Asset(symbol, self._data_cache[symbol])
+# pylint: enable=R0903
 
 class Asset(object):
     """ Represents a tradable security, by symbol """
@@ -23,17 +26,17 @@ class Asset(object):
         self._symbol = symbol
         self._data_cache = data_cache
 
-    def _all_pandas(self):
+    def _get_data_cache(self):
         """ A concatenated list of dividends and prices in pandas format """
-        return self._data_cache[self._symbol]["all"]
+        return self._data_cache
 
     def _first_price_date(self):
         """ Returns the first date available in the data cache for this asset """
-        return numpy.min(self._all_pandas().index.to_series())
+        return numpy.min(self._get_data_cache().index.to_series())
 
     def _last_price_date(self):
         """ Returns the last date available in the data cache for this asset """
-        return numpy.max(self._all_pandas().index.to_series())
+        return numpy.max(self._get_data_cache().index.to_series())
 
     def price(self, date):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
@@ -43,27 +46,27 @@ class Asset(object):
         assert date in fcalendar.ALL_TRADING_DAYS
         assert self._first_price_date() <= date <= self._last_price_date()
 
-        return self._all_pandas().ix[date]["Close"]
+        return self._get_data_cache().ix[date]["Close"]
 
     def average_yield(self):
         """ Returns the average dividend yield on a *per dividend* basis for this asset
             This is not annualized, nor is it geometric! """
 
-        dividends = self._all_pandas()[["Dividends", "Close"]].dropna()
+        dividends = self._get_data_cache()[["Dividends", "Close"]].dropna()
         return numpy.average(dividends["Dividends"] / dividends["Close"])
 
     def average_dividend_period(self):
         """ Returns the average period between dividends dispersals for this asset in days"""
 
         day = numpy.timedelta64(datetime.timedelta(1))
-        average_period = numpy.average(self._all_pandas()["Dividends"].dropna().index.to_series().diff(1).dropna())
+        average_period = numpy.average(self._get_data_cache()["Dividends"].dropna().index.to_series().diff(1).dropna())
         return average_period / day
 
     def yield_between(self, begin, end):
         """ Returns the dividend yield (raw dividends / share price at the time) between begin and end """
         assert begin <= end, "Beginning date should happen before or during end date"
 
-        dividends = self._all_pandas()[["Dividends", "Close"]].dropna()
+        dividends = self._get_data_cache()[["Dividends", "Close"]].dropna()
         clamped_dividends = dividends[(dividends.index > begin) & (dividends.index <= end)]
         yields = (clamped_dividends["Dividends"] / clamped_dividends["Close"]) + 1.0
         return reduce(operator.mul, yields, 1.0) - 1.0
@@ -77,11 +80,8 @@ class Asset(object):
         assert not (next_dividend.empty or past_dividend.empty)
 
         days_between = float((next_dividend["Date"] - past_dividend["Date"]).days)
-        yield_ = next_dividend["Dividends"] / self._all_pandas().ix[date]["Close"]
+        yield_ = next_dividend["Dividends"] / self._get_data_cache().ix[date]["Close"]
         days_in = float((date - past_dividend["Date"]).days)
-
-#        import code
-#        code.interact(local=locals())
 
         return days_in / days_between * yield_
 
@@ -105,10 +105,10 @@ class Asset(object):
         one_day = datetime.timedelta(1)
 
         #NOTE: past_dividend is inclusive, i.e., if today is dividend issue date, we consider it past.
-        next_dividend = self._all_pandas()["Dividends"].dropna().ix[date+one_day:].reset_index()
+        next_dividend = self._get_data_cache()["Dividends"].dropna().ix[date+one_day:].reset_index()
         if not next_dividend.empty:
             next_dividend = next_dividend.iloc[0]
-        past_dividend = self._all_pandas()["Dividends"].dropna().ix[:date].reset_index()
+        past_dividend = self._get_data_cache()["Dividends"].dropna().ix[:date].reset_index()
         if not past_dividend.empty:
             past_dividend = past_dividend.iloc[-1]
 
