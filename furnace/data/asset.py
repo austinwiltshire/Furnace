@@ -94,6 +94,7 @@ class Asset(object):
                    else self.average_dividend_period() - (next_dividend["Date"] - date).days)
 
         if days_in > self.average_dividend_period() or days_in < 0.0:
+            print days_in, next_dividend, past_dividend, date
             raise Exception("Too late or early to estimate dividends")
 
         return days_in * self._expected_daily_accrued_yield()

@@ -46,17 +46,17 @@ class TestBuyAndHold(FurnaceTest):
         """ Tests the simplest buy and hold strategy """
 
         performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
-        self.assert_close(performance_.CAGR(), 1.02763283748)
+        self.assert_close(performance_.cagr(), 1.02763283748)
 
     def test_index_index(self):
         """ Regression Tests indexing a strategy with a base index """
 
         performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
 
-        self.assert_close(performance_.index_on(datetime.datetime(2001, 1, 2), 100), 100)
-        self.assert_close(performance_.index_on(datetime.datetime(2001, 2, 1), 100), 107.3378)
-        self.assert_close(performance_.index_on(datetime.datetime(2002, 1, 2), 100), 90.881805)
-        self.assert_close(performance_.index_on(datetime.datetime(2012, 12, 31), 100), 138.7037)
+        self.assert_close(performance_.growth_by(datetime.datetime(2001, 1, 2)), 1.00)
+        self.assert_close(performance_.growth_by(datetime.datetime(2001, 2, 1)), 1.073378)
+        self.assert_close(performance_.growth_by(datetime.datetime(2002, 1, 2)), 0.90881805)
+        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.387037)
 # pylint: enable=R0904
 
 # pylint: disable=R0904
@@ -76,17 +76,17 @@ class TestBondsAndStocks(FurnaceTest):
         """ REGRESSION tests mixed portfolio """
         performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
 
-        self.assert_close(performance_.CAGR(), 1.06607730908)
+        self.assert_close(performance_.cagr(), 1.06607730908)
 
     def test_index_index(self):
         """ REGRESSION tests mixed portfolio """
         performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
 
-        #TODO: this check below should always be true, i.e., index on start date is always 100
-        self.assert_close(performance_.index_on(datetime.datetime(2003, 1, 2), 100), 100)
-        self.assert_close(performance_.index_on(datetime.datetime(2003, 2, 3), 100), 96.37734)
-        self.assert_close(performance_.index_on(datetime.datetime(2004, 1, 2), 100), 120.7003)
-        self.assert_close(performance_.index_on(datetime.datetime(2012, 12, 31), 100), 189.6545)
+        #NOTE: this check below should always be true, i.e., index on start date is always 100
+        self.assert_close(performance_.growth_by(datetime.datetime(2003, 1, 2)), 1.0)
+        self.assert_close(performance_.growth_by(datetime.datetime(2003, 2, 3)), 0.9637734)
+        self.assert_close(performance_.growth_by(datetime.datetime(2004, 1, 2)), 1.207003)
+        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.896545)
 # pylint: enable=R0904
 
 # pylint: disable=R0904
