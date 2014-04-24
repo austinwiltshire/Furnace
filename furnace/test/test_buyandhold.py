@@ -5,7 +5,7 @@
 
 import unittest
 import datetime
-from furnace.data import asset, yahoo
+from furnace.data import asset, yahoo, fcalendar
 from furnace import performance, strategy
 import numpy
 
@@ -25,9 +25,9 @@ class FurnaceTest(NumpyTest):
 
     def setUp(self):
         """ Initialize fixture """
-        self.furnace = performance.Furnace()
         self.data_cache = yahoo.load_pandas()
-        self.asset_factory = asset.AssetFactory(self.data_cache)
+        self.calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
+        self.asset_factory = asset.AssetFactory(self.data_cache, self.calendar)
 # pylint: enable=R0904
 
 # pylint: disable=R0904
@@ -45,13 +45,13 @@ class TestBuyAndHold(FurnaceTest):
     def test_buy_and_hold(self):
         """ Tests the simplest buy and hold strategy """
 
-        performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
+        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
         self.assert_close(performance_.cagr(), 1.02763283748)
 
     def test_index_index(self):
         """ Regression Tests indexing a strategy with a base index """
 
-        performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
+        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
 
         self.assert_close(performance_.growth_by(datetime.datetime(2001, 1, 2)), 1.00)
         self.assert_close(performance_.growth_by(datetime.datetime(2001, 2, 1)), 1.073378)
@@ -74,13 +74,13 @@ class TestBondsAndStocks(FurnaceTest):
 
     def test_buy_and_hold(self):
         """ REGRESSION tests mixed portfolio """
-        performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
+        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
 
         self.assert_close(performance_.cagr(), 1.06607730908)
 
     def test_index_index(self):
         """ REGRESSION tests mixed portfolio """
-        performance_ = self.furnace.fire(self.strategy, self.begin, self.end)
+        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
 
         #NOTE: this check below should always be true, i.e., index on start date is always 100
         self.assert_close(performance_.growth_by(datetime.datetime(2003, 1, 2)), 1.0)
@@ -96,7 +96,8 @@ class TestAsset(NumpyTest):
     def setUp(self):
         """ Load in data cache """
         self.data_cache = yahoo.load_pandas()
-        self.asset_factory = asset.AssetFactory(self.data_cache)
+        self.calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
+        self.asset_factory = asset.AssetFactory(self.data_cache, self.calendar)
         self.spy = self.asset_factory.make_asset("SPY")
 
     def test_average_yield(self):

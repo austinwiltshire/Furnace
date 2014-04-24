@@ -1,16 +1,20 @@
 """ Portfolio tracking and optimization """
 
+import abc
+
+# pylint: disable=R0903
+#NOTE: too many public methods
 class PortfolioOptimizer(object):
     """ Given a forecast for a set of assets, returns the optimal weighting of each asset in a
     portfolio """
-    def __init__(self):
-        pass
+    __metaclass__ = abc.ABCMeta
 
-#TODO: use abstract base classes for this
+    @abc.abstractmethod
     def optimize(self, forecasts, date):
         """ Forecasts need to be able to back point to their asset class and thus implicitly define
         the asset universe """
-        raise Exception("Not implemented yet")
+        pass
+#pylint: enable=R0903
 
 def growth(begin_portfolio, end_portfolio):
     """ The growth or reduction in value from the begin to the end """
@@ -18,6 +22,8 @@ def growth(begin_portfolio, end_portfolio):
 
 #TODO: buy and hold is really a rebalancing rule - i.e., the trading period is from complete beginning to end.
 #100% stocks and 80% stocks and 20% bonds are both examples of a static portfolio with a buy and hold horizon
+# pylint: disable=R0903
+#NOTE: too many public methods
 class BuyAndHoldPortfolio(PortfolioOptimizer):
     """ Purchases the SPY at the begining period and holds it to the end """
     def __init__(self, begin_date):
@@ -27,9 +33,12 @@ class BuyAndHoldPortfolio(PortfolioOptimizer):
     def optimize(self, forecasts, date):
         """ Simply sets 100% weight to the first asset returned in the forecast """
         return Portfolio([Position(forecasts[0].asset(), Share(1.0))], date)
+#pylint: enable=R0903
 
 #TODO: this is really just a 'static strategy' for portfolios. It can be changed orthogonal to a rebalancing rule
 #and can have hard percentage targets to rebalance the value of the portfolio to.
+# pylint: disable=R0903
+#NOTE: too many public methods
 class MixedBuyAndHold(PortfolioOptimizer):
     """ Purchases 80% SPY and 20% BIL """
     def __init__(self, begin_date):
@@ -39,8 +48,9 @@ class MixedBuyAndHold(PortfolioOptimizer):
 
     def optimize(self, forecasts, date):
         return Portfolio([Position(forecasts[0].asset(), Share(.8)), Position(forecasts[1].asset(), Share(.2))], date)
+#pylint: enable=R0903
 
-class Portfolio:
+class Portfolio(object):
     """ A collection of assets and their share/holdings """
     def __init__(self, positions, date):
         self._positions = positions
@@ -49,7 +59,8 @@ class Portfolio:
     def value(self):
         """ Returns the share of this portfolio times the price of the assets, roughly how much money you'd need for
             'one share' of this portfolio """
-        #TODO: rename "index value" since it's not a true value as we don't really own mroe than 'one unit' over time
+        #TODO: analyze code base for use of indexes versus values. portfolios have values, but can be used
+        #as indecies
         return sum([position.share().value(position.asset().price(self._date)) for position in self._positions])
 
     def on_date(self, date):
@@ -86,6 +97,8 @@ class Position(object):
         dividends_accrued = (1.0 + self._asset.yield_accrued(end)) if begin != end else 1.0
         return Position(self._asset, self._share * dividends_received * dividends_accrued)
 
+# pylint: disable=R0903
+#NOTE: too many public methods
 class Share(object):
     """ Represents a holding an asset """
     def __init__(self, share):
@@ -97,3 +110,4 @@ class Share(object):
     def value(self, price):
         """ Returns the value of this share given a price """
         return price * self._share
+#pylint: enable=R0903

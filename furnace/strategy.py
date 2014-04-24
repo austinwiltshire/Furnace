@@ -3,9 +3,9 @@
 # Ultimately the metrics forecasted as inputs for the optimizer are part of the financial strategy and may have
 # different models for each one
 
-import performance
-import weathermen
-import portfolio
+from furnace import performance
+from furnace import weathermen
+from furnace import portfolio
 import datetime
 import abc
 
@@ -27,11 +27,15 @@ class Strategy(object):
     """ A pair of weatherman and portfolio optimizer """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, portfolio_optimizer):
+    def __init__(self, portfolio_optimizer, asset_factory):
         self._portfolio_optimizer = portfolio_optimizer
+        self._asset_factory = asset_factory
 
     def performance_during(self, begin_date, end_date):
         """ Gets the overall performance from begin_date to end_date """
+        assert self._asset_factory.supports(begin_date)
+        assert self._asset_factory.supports(end_date)
+
         period_performances = []
         for trading_period in self.periods_during(begin_date, end_date):
             beginning_portfolio = self.portfolio_on(trading_period.begin())
@@ -66,7 +70,8 @@ class BuyAndHoldStocks(Strategy):
     """ Purchases the SPY at the begining period and holds it to the end """
 
     def __init__(self, asset_factory, begin_date):
-        super(BuyAndHoldStocks, self).__init__(portfolio.BuyAndHoldPortfolio(begin_date))
+        super(BuyAndHoldStocks, self).__init__(portfolio.BuyAndHoldPortfolio(begin_date), asset_factory)
+        assert asset_factory.supports(begin_date)
         self._asset_factory = asset_factory
         self._begin_date = begin_date
 
@@ -87,7 +92,7 @@ class BuyAndHoldStocksAndBonds(Strategy):
     """ Purchases the SPY and LQD at the begining period and holds it to the end """
 
     def __init__(self, asset_factory, begin_date):
-        super(BuyAndHoldStocksAndBonds, self).__init__(portfolio.MixedBuyAndHold(begin_date))
+        super(BuyAndHoldStocksAndBonds, self).__init__(portfolio.MixedBuyAndHold(begin_date), asset_factory)
         self.asset_factory = asset_factory
         self.__begin_date = begin_date
 

@@ -5,26 +5,28 @@
 
 import operator
 import numpy
-from furnace.data import fcalendar
 import datetime
 
-# pylint: disable=R0903
-#NOTE: not enough public methods as of now
 class AssetFactory(object):
     """ Produces assets """
-    def __init__(self, data_cache):
+    def __init__(self, data_cache, calendar):
         self._data_cache = data_cache
+        self._calendar = calendar
 
     def make_asset(self, symbol):
         """ Creates an asset based on the ticker symbol """
-        return Asset(symbol, self._data_cache[symbol])
-# pylint: enable=R0903
+        return Asset(symbol, self._data_cache[symbol], self._calendar)
+
+    def supports(self, date_):
+        """ Predicate on whether this asset factory can support the date passed in """
+        return date_ in self._calendar
 
 class Asset(object):
-    """ Represents a tradable security, by symbol """
-    def __init__(self, symbol, data_cache):
+    """ Represents a tradable security, by symbol, over a period of time """
+    def __init__(self, symbol, data_cache, calendar):
         self._symbol = symbol
         self._data_cache = data_cache
+        self._calendar = calendar
 
     def _get_data_cache(self):
         """ A concatenated list of dividends and prices in pandas format """
@@ -40,10 +42,8 @@ class Asset(object):
 
     def price(self, date):
         """ Returns the price of this asset given a date. Currently returns the closing price. """
-#        import code
-#        code.interact(local=locals())
 
-        assert date in fcalendar.ALL_TRADING_DAYS
+        assert date in self._calendar
         assert self._first_price_date() <= date <= self._last_price_date()
 
         return self._get_data_cache().ix[date]["Close"]
@@ -80,7 +80,9 @@ class Asset(object):
         assert not (next_dividend.empty or past_dividend.empty)
 
         days_between = float((next_dividend["Date"] - past_dividend["Date"]).days)
-        yield_ = next_dividend["Dividends"] / self._get_data_cache().ix[date]["Close"]
+        estimated_closing_date = self._calendar.nth_trading_day_before(0, date)
+        yield_ = next_dividend["Dividends"] / self._get_data_cache().ix[estimated_closing_date]["Close"]
+
         days_in = float((date - past_dividend["Date"]).days)
 
         return days_in / days_between * yield_
@@ -94,8 +96,7 @@ class Asset(object):
                    else self.average_dividend_period() - (next_dividend["Date"] - date).days)
 
         if days_in > self.average_dividend_period() or days_in < 0.0:
-            print days_in, next_dividend, past_dividend, date
-            raise Exception("Too late or early to estimate dividends")
+            raise Exception("Too early or late to estimate dividends")
 
         return days_in * self._expected_daily_accrued_yield()
 
