@@ -3,14 +3,14 @@
 import abc
 
 # pylint: disable=R0903
-#NOTE: too many public methods
+#NOTE: too few public methods
 class PortfolioOptimizer(object):
     """ Given a forecast for a set of assets, returns the optimal weighting of each asset in a
     portfolio """
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def optimize(self, forecasts, date):
+    def optimize(self, forecasts):
         """ Forecasts need to be able to back point to their asset class and thus implicitly define
         the asset universe """
         pass
@@ -30,9 +30,9 @@ class BuyAndHoldPortfolio(PortfolioOptimizer):
         super(BuyAndHoldPortfolio, self).__init__()
         self._begin_date = begin_date
 
-    def optimize(self, forecasts, date):
+    def optimize(self, forecasts):
         """ Simply sets 100% weight to the first asset returned in the forecast """
-        return Portfolio([Position(forecasts[0].asset(), Share(1.0))], date)
+        return TargetPortfolio([Position(forecasts[0].asset(), Share(1.0))])
 #pylint: enable=R0903
 
 #TODO: this is really just a 'static strategy' for portfolios. It can be changed orthogonal to a rebalancing rule
@@ -46,8 +46,8 @@ class MixedBuyAndHold(PortfolioOptimizer):
         self._begin_date = begin_date
         #TODO: could take in the asset names i want to track and then look them up in the forecasts
 
-    def optimize(self, forecasts, date):
-        return Portfolio([Position(forecasts[0].asset(), Share(.8)), Position(forecasts[1].asset(), Share(.2))], date)
+    def optimize(self, forecasts):
+        return TargetPortfolio([Position(forecasts[0].asset(), Share(.8)), Position(forecasts[1].asset(), Share(.2))])
 #pylint: enable=R0903
 
 class Portfolio(object):
@@ -71,6 +71,21 @@ class Portfolio(object):
     def date(self):
         """ Getter for the date of this portfolio """
         return self._date
+
+    def rebalance(self, target_portfolio, date):
+        """ Rebalances this portfolio to the target's weightings """
+        return target_portfolio.create(self.on_date(date).value(), date)
+
+class TargetPortfolio(object):
+    """ Represents a unit portfolio who's weightings add up to 1 """
+
+    def __init__(self, positions):
+        self._positions = positions
+        assert sum(position.share()._share for position in self._positions) == 1
+
+    def create(self, value, date):
+        """ Creates a real portfolio with value to match this target """
+        return Portfolio([Position(position.asset(), position.share() * value) for position in self._positions], date)
 
 class Position(object):
     """ Represents a certain holding of an asset """
@@ -96,6 +111,7 @@ class Position(object):
         #accrue dividends for future growth to smooth unless we actually haven't had time to
         dividends_accrued = (1.0 + self._asset.yield_accrued(end)) if begin != end else 1.0
         return Position(self._asset, self._share * dividends_received * dividends_accrued)
+
 
 # pylint: disable=R0903
 #NOTE: too many public methods

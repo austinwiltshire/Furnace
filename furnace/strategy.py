@@ -57,8 +57,11 @@ class Strategy(object):
         """ Generates a portfolio this strategy would recommend for date """
 
         forecast = self.forecast(date)
-        portfolio_ = self._portfolio_optimizer.optimize(forecast, date)
-        return portfolio_
+        target_portfolio = self._portfolio_optimizer.optimize(forecast)
+        #TODO: why do we recommend a portfolio for a date that has no value?
+        #TODO: for now, just give it a unit portfolio as a stand in
+        unit_portfolio = portfolio.Portfolio([portfolio.Position(self._asset_factory.make_asset("SPY"), portfolio.Share(1.0))], date)
+        return unit_portfolio.rebalance(target_portfolio, date)
 
 #TODO: this strategy is a static portfolio target of 100% one asset and a buy and hold trading period
 # REFACTOR
