@@ -14,7 +14,7 @@ def main():
     data_cache = furnace.data.yahoo.load_pandas()
 
     calendar = furnace.data.fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
-    asset_factory = furnace.data.asset.AssetFactory(data_cache, calendar)
+    asset_factory = furnace.data.asset.AssetUniverse(["SPY", "LQD"], data_cache, calendar)
 
     #NOTE: don't start earlier - dividends begin in february but our data set goes back to jan. Either get earlier
     #dividend data or start later than jan.

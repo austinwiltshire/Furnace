@@ -27,41 +27,82 @@ class Strategy(object):
     """ A pair of weatherman and portfolio optimizer """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, portfolio_optimizer, asset_factory):
+    def __init__(self, portfolio_optimizer, asset_universe, rebalancing_rule, forecaster):
         self._portfolio_optimizer = portfolio_optimizer
-        self._asset_factory = asset_factory
+        self._asset_universe = asset_universe
+        self._rebalancing_rule = rebalancing_rule
+        self._forecaster = forecaster
 
     def performance_during(self, begin_date, end_date):
         """ Gets the overall performance from begin_date to end_date """
-        assert self._asset_factory.supports(begin_date)
-        assert self._asset_factory.supports(end_date)
+        assert self._asset_universe.supports_date(begin_date)
+        assert self._asset_universe.supports_date(end_date)
 
         period_performances = []
         for trading_period in self.periods_during(begin_date, end_date):
-            beginning_portfolio = self.portfolio_on(trading_period.begin())
+            period_begin = trading_period.begin()
+            beginning_portfolio = self.target_portfolio_on(period_begin).unit_portfolio(period_begin)
             end_portfolio = beginning_portfolio.on_date(trading_period.end())
             period_performances.append(performance.PeriodPerformance(beginning_portfolio, end_portfolio))
         return performance.OverallPerformance(period_performances)
 
-    @abc.abstractmethod
     def periods_during(self, begin_date, end_date):
         """ The periods this strategy operates on - i.e., weekly, monthly, daily """
+        assert begin_date <= end_date
+
+        return self._rebalancing_rule.periods_during(begin_date, end_date)
+
+    def forecast(self, date):
+        """ Generate a forecast for this strategy """
+        return self._forecaster.forecast(self._asset_universe, date, self._rebalancing_rule.period_length())
+
+    def target_portfolio_on(self, date):
+        """ Generates a target portfolio this strategy would recommend for date """
+
+        forecast = self.forecast(date)
+        return self._portfolio_optimizer.optimize(forecast)
+
+#NOTE: assuming there will be more rebalancing rules eventually and this interface will grow
+#pylint: disable=R0922,R0903
+class RebalancingRule(object):
+    """ Represents different strategies for when to rebalance a portfolio """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def periods_during(self, begin_date, end_date):
+        """ Returns a set of periods, beginning at begin and ending at end (possibly truncated at beginning and end)
+            based on this rebalancing rule with rebalancing to occur at each period switch """
         pass
 
     @abc.abstractmethod
-    def forecast(self, date):
-        """ Generate a forecast for this strategy """
+    def period_length(self):
+        """ The length of time in days of this period """
         pass
+#pylint: enable=R0922
 
-    def portfolio_on(self, date):
-        """ Generates a portfolio this strategy would recommend for date """
+#NOTE: assumed this interface will grow
+#pylint: disable=R0903
+class BuyAndHold(RebalancingRule):
+    """ Buy and hold never trades - it starts with its beginning portfolio and holds it until the end """
 
-        forecast = self.forecast(date)
-        target_portfolio = self._portfolio_optimizer.optimize(forecast)
-        #TODO: why do we recommend a portfolio for a date that has no value?
-        #TODO: for now, just give it a unit portfolio as a stand in
-        unit_portfolio = portfolio.Portfolio([portfolio.Position(self._asset_factory.make_asset("SPY"), portfolio.Share(1.0))], date)
-        return unit_portfolio.rebalance(target_portfolio, date)
+    def __init__(self, begin_date, end_date):
+        self._begin_date = begin_date
+        self._end_date = end_date
+
+    def periods_during(self, begin_date, end_date):
+        """ Returns a single trading period: begin to end """
+        assert begin_date <= end_date
+        assert self._begin_date == begin_date
+        assert self._end_date == end_date
+
+        yield TradingPeriod(begin_date, end_date)
+
+    def period_length(self):
+        """ Returns the length of the buy and hold period """
+        return (self._end_date - self._begin_date).days
+
+#pylint: enable=R0903
+
 
 #TODO: this strategy is a static portfolio target of 100% one asset and a buy and hold trading period
 # REFACTOR
@@ -69,43 +110,34 @@ class Strategy(object):
 #and an *asset universe* (i.e., which assets we'll hold), as well as possibly different optimization rules...
 # optimization metrics (i.e., sharpe ratio), forecasting methods for each metric for each asset, asset universe
 # and trading period
-class BuyAndHoldStocks(Strategy):
-    """ Purchases the SPY at the begining period and holds it to the end """
+def buy_and_hold_stocks(asset_universe, begin_date, end_date):
+    """ Purchases the SPY at the beginning period and holds it to the end """
 
-    def __init__(self, asset_factory, begin_date):
-        super(BuyAndHoldStocks, self).__init__(portfolio.BuyAndHoldPortfolio(begin_date), asset_factory)
-        assert asset_factory.supports(begin_date)
-        self._asset_factory = asset_factory
-        self._begin_date = begin_date
+    assert asset_universe.supports_date(begin_date)
+    assert asset_universe.supports_symbol("SPY")
 
-    def periods_during(self, begin_date, end_date):
-        """ Buy and hold only has one single period """
-        assert begin_date >= self._begin_date
+    asset_universe = asset_universe.restricted_to(["SPY"])
 
-        yield TradingPeriod(begin_date, end_date)
+    return Strategy(portfolio.SingleAsset(asset_universe),
+                    asset_universe,
+                    BuyAndHold(begin_date, end_date),
+                    weathermen.NullForecaster())
 
-    def forecast(self, date):
-        """ We only trade in one asset so we only forecast one asset's growth """
-        forecaster = weathermen.NullForecaster()
-        return [forecaster.forecast(self._asset_factory.make_asset("SPY"), date, datetime.timedelta(1))]
+#TODO: NOW!!!!!
+#next step:
+#- add static target portfolio where the init takes in a target and it just always recommends that
+#- pass in classes for portfolio and forecaster so that their asset universe arguments are always the same
 
 #TODO: This stratey really is just a static portfolio target and a buy and hold trading period
 #REFACTOR
-class BuyAndHoldStocksAndBonds(Strategy):
-    """ Purchases the SPY and LQD at the begining period and holds it to the end """
+def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date):
+    """ Purchases 80% SPY and 20% LQD """
 
-    def __init__(self, asset_factory, begin_date):
-        super(BuyAndHoldStocksAndBonds, self).__init__(portfolio.MixedBuyAndHold(begin_date), asset_factory)
-        self.asset_factory = asset_factory
-        self.__begin_date = begin_date
+    assert asset_universe.supports_date(begin_date)
+    assert asset_universe.supports_symbol("SPY")
+    assert asset_universe.supports_symbol("LQD")
 
-    def periods_during(self, begin_date, end_date):
-        """ Buy and hold only has one single period """
-
-        yield TradingPeriod(begin_date, end_date)
-
-    def forecast(self, date):
-        """ We forecast two assets - stocks and corporate bonds """
-        forecaster = weathermen.NullForecaster()
-        return [forecaster.forecast(self.asset_factory.make_asset("SPY"), date, datetime.timedelta(1)),
-                forecaster.forecast(self.asset_factory.make_asset("LQD"), date, datetime.timedelta(1))]
+    return Strategy(portfolio.MixedBuyAndHold(asset_universe),
+                    asset_universe.restricted_to(["SPY", "LQD"]),
+                    BuyAndHold(begin_date, end_date),
+                    weathermen.NullForecaster())

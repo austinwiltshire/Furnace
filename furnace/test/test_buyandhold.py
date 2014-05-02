@@ -27,7 +27,6 @@ class FurnaceTest(NumpyTest):
         """ Initialize fixture """
         self.data_cache = yahoo.load_pandas()
         self.calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
-        self.asset_factory = asset.AssetFactory(self.data_cache, self.calendar)
 # pylint: enable=R0904
 
 # pylint: disable=R0904
@@ -40,7 +39,8 @@ class TestBuyAndHold(FurnaceTest):
         super(TestBuyAndHold, self).setUp()
         self.begin = datetime.datetime(2001, 1, 2)
         self.end = datetime.datetime(2012, 12, 31)
-        self.strategy = strategy.BuyAndHoldStocks(self.asset_factory, self.begin)
+        self.asset_factory = asset.AssetUniverse(["SPY"], self.data_cache, self.calendar)
+        self.strategy = strategy.buy_and_hold_stocks(self.asset_factory, self.begin, self.end)
 
     def test_buy_and_hold(self):
         """ Tests the simplest buy and hold strategy """
@@ -69,7 +69,8 @@ class TestBondsAndStocks(FurnaceTest):
         super(TestBondsAndStocks, self).setUp()
         self.begin = datetime.datetime(2003, 1, 2)
         self.end = datetime.datetime(2012, 12, 31)
-        self.strategy = strategy.BuyAndHoldStocksAndBonds(self.asset_factory, self.begin)
+        self.asset_factory = asset.AssetUniverse(["SPY", "LQD"], self.data_cache, self.calendar)
+        self.strategy = strategy.buy_and_hold_stocks_and_bonds(self.asset_factory, self.begin, self.end)
 
 
     def test_buy_and_hold(self):
@@ -97,7 +98,7 @@ class TestAsset(NumpyTest):
         """ Load in data cache """
         self.data_cache = yahoo.load_pandas()
         self.calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
-        self.asset_factory = asset.AssetFactory(self.data_cache, self.calendar)
+        self.asset_factory = asset.AssetUniverse(["SPY"], self.data_cache, self.calendar)
         self.spy = self.asset_factory.make_asset("SPY")
 
     def test_average_yield(self):

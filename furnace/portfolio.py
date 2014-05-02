@@ -9,6 +9,9 @@ class PortfolioOptimizer(object):
     portfolio """
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self, asset_universe):
+        self._asset_universe = asset_universe
+
     @abc.abstractmethod
     def optimize(self, forecasts):
         """ Forecasts need to be able to back point to their asset class and thus implicitly define
@@ -24,15 +27,17 @@ def growth(begin_portfolio, end_portfolio):
 #100% stocks and 80% stocks and 20% bonds are both examples of a static portfolio with a buy and hold horizon
 # pylint: disable=R0903
 #NOTE: too many public methods
-class BuyAndHoldPortfolio(PortfolioOptimizer):
-    """ Purchases the SPY at the begining period and holds it to the end """
-    def __init__(self, begin_date):
-        super(BuyAndHoldPortfolio, self).__init__()
-        self._begin_date = begin_date
+class SingleAsset(PortfolioOptimizer):
+    """ A portfolio that holds a single asset - gets the asset to hold from its asset universe """
+    def __init__(self, asset_universe):
+        assert asset_universe.cardinality() == 1
+        super(SingleAsset, self).__init__(asset_universe)
 
-    def optimize(self, forecasts):
-        """ Simply sets 100% weight to the first asset returned in the forecast """
-        return TargetPortfolio([Position(forecasts[0].asset(), Share(1.0))])
+        self._symbol = asset_universe.supported_symbols().pop()
+
+    def optimize(self, _):
+        """ We simply hold 100% of whatever asset we are restricted to """
+        return TargetPortfolio([Position(self._asset_universe.make_asset(self._symbol), Share(1.0))])
 #pylint: enable=R0903
 
 #TODO: this is really just a 'static strategy' for portfolios. It can be changed orthogonal to a rebalancing rule
@@ -40,14 +45,16 @@ class BuyAndHoldPortfolio(PortfolioOptimizer):
 # pylint: disable=R0903
 #NOTE: too many public methods
 class MixedBuyAndHold(PortfolioOptimizer):
-    """ Purchases 80% SPY and 20% BIL """
-    def __init__(self, begin_date):
-        super(MixedBuyAndHold, self).__init__()
-        self._begin_date = begin_date
+    """ Purchases 80% SPY and 20% LQD """
+    def __init__(self, asset_universe):
+        super(MixedBuyAndHold, self).__init__(asset_universe)
         #TODO: could take in the asset names i want to track and then look them up in the forecasts
 
-    def optimize(self, forecasts):
-        return TargetPortfolio([Position(forecasts[0].asset(), Share(.8)), Position(forecasts[1].asset(), Share(.2))])
+    def optimize(self, _):
+        """ We flat out ignore the forecaster argument """
+        spy = self._asset_universe.make_asset("SPY")
+        lqd = self._asset_universe.make_asset("LQD")
+        return TargetPortfolio([Position(spy, Share(.8)), Position(lqd, Share(.2))])
 #pylint: enable=R0903
 
 class Portfolio(object):
@@ -86,6 +93,10 @@ class TargetPortfolio(object):
     def create(self, value, date):
         """ Creates a real portfolio with value to match this target """
         return Portfolio([Position(position.asset(), position.share() * value) for position in self._positions], date)
+
+    def unit_portfolio(self, date):
+        """ Creates a real portfolio with value of 1.0 """
+        return self.create(1.0, date)
 
 class Position(object):
     """ Represents a certain holding of an asset """
