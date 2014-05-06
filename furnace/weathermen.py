@@ -51,6 +51,8 @@ class NullForecast(Forecast):
 class NullForecaster(Weatherman):
     """ Returns no change for all assets """
 
+#NOTE: do not add asset universe as an init param - strategy ensures that the same asset universe is passed in to
+#portfolio optimizer and weatherman
     def forecast(self, asset_universe, time_point, period):
         """ Returns nothing but a 0% change """
         return NullForecast(asset_universe, 1.0)

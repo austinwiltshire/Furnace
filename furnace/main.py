@@ -21,7 +21,7 @@ def main():
     #NOTE: below is a monday, the first and second of the month was a weekend
     begin = calendar.nth_trading_day_after(0, datetime.datetime(2003, 2, 3))
     end = calendar.nth_trading_day_before(0, datetime.datetime(2012, 12, 31))
-    stocks_and_bonds = furnace.strategy.BuyAndHoldStocksAndBonds(asset_factory, begin)
+    stocks_and_bonds = furnace.strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
     stocks_and_bonds_perf = furnace.performance.fire_furnace(stocks_and_bonds, begin, end)
 
 #    stocks = strategy.BuyAndHoldStocks(asset_factory, begin)

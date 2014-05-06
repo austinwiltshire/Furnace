@@ -45,17 +45,20 @@ class OverallPerformance(object):
         """ Returns growth by a date as a percent scaled against 100% on beginning date of this performance """
 
         applicable_period = algorithm.find(self._portfolio_periods, lambda p: p.begin() <= date <= p.end())
-        before_periods = [p for p in self._portfolio_periods if p.end() < date]
-        growth_at_begin = reduce(operator.mul, [p.growth() for p in before_periods], 1.0)
+        before_periods = [period for period in self._portfolio_periods if period.end() < date]
+        growth_at_begin = reduce(operator.mul, [period.growth() for period in before_periods], 1.0)
         return growth_at_begin * applicable_period.growth_by(date)
 
     def plot_index(self, subplot, index_base):
-        """ Plots a day by day performance on a matplotlib chart """
+        """ Plots a day by day performance, with day one pegged at value of index_base, on a matplotlib chart """
+        #NOTE: horribly inefficient. Some sort of memoization on growth_by would probably speed it up
 
-        dates = list(itertools.takewhile(lambda d: d <= self.end(), fcalendar.build_trading_date_rule(self.begin())))
-        values = [index_base * self.growth_by(day) for day in dates]
+        dates = list(itertools.takewhile(lambda date: date <= self.end(),
+                     fcalendar.build_trading_date_rule(self.begin())))
 
-        subplot.plot(numpy.array([numpy.datetime64(d) for d in dates]), numpy.array(values))
+        indecies = [index_base * self.growth_by(day) for day in dates]
+
+        subplot.plot(numpy.array([numpy.datetime64(d) for d in dates]), numpy.array(indecies))
 
     def begin(self):
         """ Returns beginning date of this performance period """
@@ -91,4 +94,4 @@ class PeriodPerformance(object):
     def growth_by(self, date):
         """ Return growth as a percentage based on 100% at beginning of the period by date"""
         assert self.begin() <= date <= self.end()
-        return furnace.portfolio.growth(self._begin_portfolio, self._begin_portfolio.on_date(date))
+        return furnace.portfolio.growth(self._begin_portfolio, self._begin_portfolio.reinvest_dividends(date))

@@ -48,7 +48,7 @@ class TestBuyAndHold(FurnaceTest):
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
         self.assert_close(performance_.cagr(), 1.02763283748)
 
-    def test_index_index(self):
+    def test_index(self):
         """ Regression Tests indexing a strategy with a base index """
 
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
@@ -79,7 +79,7 @@ class TestBondsAndStocks(FurnaceTest):
 
         self.assert_close(performance_.cagr(), 1.06607730908)
 
-    def test_index_index(self):
+    def test_index(self):
         """ REGRESSION tests mixed portfolio """
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
 

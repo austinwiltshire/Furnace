@@ -6,6 +6,8 @@ import unittest
 from furnace.data import fcalendar, yahoo
 import datetime
 import itertools
+import os.path
+import pickle
 
 #pylint: disable=R0904
 class TestFcalendar(unittest.TestCase):
@@ -73,8 +75,12 @@ class TestFCalendarRange(unittest.TestCase):
         begin_date = datetime.datetime(1993, 2, 3)
         end_date = datetime.datetime.today()
 
-        prices_available = yahoo.webload_symbol_price("SPY", begin_date, end_date)
-        dates_available = set(timestamp.to_pydatetime() for timestamp in prices_available.index.tolist())
+        if os.path.isfile("spy_price_cache_" + str(datetime.date.today()) + ".csv"):
+            dates_available = pickle.load(open("spy_price_cache_" + str(datetime.date.today()) + ".csv", "r"))
+        else:
+            prices_available = yahoo.webload_symbol_price("SPY", begin_date, end_date)
+            dates_available = set(timestamp.to_pydatetime() for timestamp in prices_available.index.tolist())
+            pickle.dump(dates_available, open("spy_price_cache_" + str(datetime.date.today()) + ".csv", "w"))
 
         calendar = fcalendar.make_fcalendar(begin_date)
         dates_expected = set([day for day in itertools.takewhile(lambda d: d <= end_date, calendar)])
