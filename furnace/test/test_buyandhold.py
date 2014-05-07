@@ -88,6 +88,13 @@ class TestBondsAndStocks(FurnaceTest):
         self.assert_close(performance_.growth_by(datetime.datetime(2003, 2, 3)), 0.9637734)
         self.assert_close(performance_.growth_by(datetime.datetime(2004, 1, 2)), 1.207003)
         self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.896545)
+
+    def test_volatility(self):
+        """ TDD smoke test """
+
+        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
+
+        vol = performance_.volatility()
 # pylint: enable=R0904
 
 # pylint: disable=R0904

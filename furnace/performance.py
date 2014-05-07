@@ -41,6 +41,51 @@ class OverallPerformance(object):
         """ Returns the compound annual growth rate """
         return pow(self.total_return(), 1.0 / (self.duration().days / 365.0))
 
+    #TODO: 
+    #1. simple daily volatility over the entire period
+    #   a. add daily return to asset. Given a date, i need to know the capital gains for that day as a %
+    #   b. add daily basis adjustment to asset. Given a date, i need to know how much of a basis/yield I got assuming
+    #       I accrue dividends on a daily basis and buy stock that day.
+    #   c. both of the above should be columns on asset's data frame
+    #   d. portfolio's growth should simply be a multiplication of the above plus the addition of the basis/yield
+    #   QUESTION: do i need a basis on asset or just a daily yield and daily cap gains, and portfolio will be the one
+    #       that uses yield to grow basis and cap gains to adjust price?
+    #2. paramaterize on sample length - do trailing daily volatility of only a few months (this moves the 'beginnign)
+    #3. parameterize on window - given two dates, calculate weekly volatilty. (this moves the 'end')
+    #4. parameterize on period length - do trailing weekly volatility
+    #5. add parameterizations to cagr
+    def volatility(self):
+        """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
+        #Should I just make a simplifying assumption that all statistics will ultimately be built off of daily deltas?
+        #This would not only speed up the generation of indecies, but make these sorts of statistics trivial to
+        #implement in pandas.
+        #Pros:
+        #   - Speed up generation of indecies. Equivalent to a memoization approach. Indexes generated daily anyway.
+        #   - Easy to extend using pandas
+        #Cons:
+        #   - Settling on day is going to make going to subday intervals harder
+        #   - Seems inelegant. But why?
+        #Notes:
+        #   - So long as periods longer than a day; i.e., strides; are still well supported (which i will implement and
+        # test for using monthly and weekly rebalancing rules), a lot of the inelegance argument goes away
+        #   - Will probably have a hard time going to sub day plots anyway, nor do I ultimately think I need sub day
+        # plots any time soon anyway.
+        #   - The design being discussed more or less means I will use my strategy to generate a time series of % deltas
+        # possibly with other costs as well. Fitting it into the time series domain seems like I better leverage my
+        # tools.
+        #   - But I still intuitively don't like it. The parameterized approach that grabs things lazily seems more
+        # 'closed form'. How I think of solving any particular problem is how it ultimately is solved rather than
+        # consulting some sort of table.
+        #   - Where will this table live? Probably in the period performance for now. OverallPerformance could
+        # potentially be simplified into doing little more than stitching together various period performance time
+        # series.
+        #   - Thus the striding and windowing is still done at the period performance layer, which does continue to give
+        # a bit of elegance back and fits with the rebalancing rule requirements.
+        #   - There's really no other way.
+
+
+        pass
+
     def growth_by(self, date):
         """ Returns growth by a date as a percent scaled against 100% on beginning date of this performance """
 
