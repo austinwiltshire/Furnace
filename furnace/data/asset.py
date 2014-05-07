@@ -6,7 +6,6 @@
 import operator
 import numpy
 import datetime
-import copy
 
 class AssetUniverse(object):
     """ Represents all tradable assets for any particular model. """
@@ -28,9 +27,9 @@ class AssetUniverse(object):
         """ Predicate on whether symbol is in this asset universe """
         return symbol in self._supported_symbols
 
-    def supported_symbols(self):
-        """ Returns the symbols supported in this asset universe """
-        return copy.copy(self._supported_symbols)
+    def __iter__(self):
+        for symbol in self._supported_symbols:
+            yield self.make_asset(symbol)
 
     def restricted_to(self, supported_symbols):
         """ Subsets this asset universe on the passed in symbols """

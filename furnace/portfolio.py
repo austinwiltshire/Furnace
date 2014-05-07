@@ -31,8 +31,8 @@ class SingleAsset(PortfolioOptimizer):
     def optimize(self, _, asset_universe):
         """ We simply hold 100% of whatever asset we are restricted to """
         assert asset_universe.cardinality() == 1
-        symbol = asset_universe.supported_symbols().pop()
-        return TargetPortfolio([Position(asset_universe.make_asset(symbol), Share(1.0))])
+        asset = [symbol for symbol in asset_universe][0]
+        return TargetPortfolio([Position(asset, Share(1.0))])
 #pylint: enable=R0903
 
 # pylint: disable=R0903
