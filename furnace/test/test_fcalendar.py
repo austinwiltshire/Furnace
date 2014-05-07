@@ -3,8 +3,11 @@ Test the fcalendar module
 """
 
 import unittest
-from furnace.data import fcalendar
+from furnace.data import fcalendar, yahoo
 import datetime
+import itertools
+import os.path
+import pickle
 
 #pylint: disable=R0904
 class TestFcalendar(unittest.TestCase):
@@ -44,20 +47,47 @@ class TestFcalendarHelpers(unittest.TestCase):
         """ Test the after logic """
 
         date = datetime.datetime
+        calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
 
-        self.assertTrue(fcalendar.nth_trading_day_after(date(2005, 6, 13), 3) == date(2005, 6, 16))
-        self.assertTrue(fcalendar.nth_trading_day_after(date(2005, 6, 13), 0) == date(2005, 6, 13))
-        self.assertTrue(fcalendar.nth_trading_day_after(date(2005, 6, 18), 0) == date(2005, 6, 20))
+        self.assertTrue(calendar.nth_trading_day_after(3, date(2005, 6, 13)) == date(2005, 6, 16))
+        self.assertTrue(calendar.nth_trading_day_after(0, date(2005, 6, 13)) == date(2005, 6, 13))
+        self.assertTrue(calendar.nth_trading_day_after(0, date(2005, 6, 18)) == date(2005, 6, 20))
 
     def test_before(self):
         """ Test the after logic """
 
         date = datetime.datetime
+        calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
 
         #july forth is this week
-        self.assertTrue(fcalendar.nth_trading_day_before(date(2006, 7, 7), 3) == date(2006, 7, 3))
-        self.assertTrue(fcalendar.nth_trading_day_before(date(2006, 7, 7), 0) == date(2006, 7, 7))
-        self.assertTrue(fcalendar.nth_trading_day_before(date(2006, 7, 8), 0) == date(2006, 7, 7))
+        self.assertTrue(calendar.nth_trading_day_before(3, date(2006, 7, 7)) == date(2006, 7, 3))
+        self.assertTrue(calendar.nth_trading_day_before(0, date(2006, 7, 7)) == date(2006, 7, 7))
+        self.assertTrue(calendar.nth_trading_day_before(0, date(2006, 7, 8)) == date(2006, 7, 7))
+#pylint: enable=R0904
+
+#pylint: disable=R0904
+#NOTE: too many public methods
+class TestFCalendarRange(unittest.TestCase):
+    """ Test that the range of the calendar is correct """
+
+    def test_range(self):
+        """ Tests that the range of the calendar covers the same range as the data """
+        begin_date = datetime.datetime(1993, 2, 3)
+        end_date = datetime.datetime.today()
+
+        if os.path.isfile("spy_price_cache_" + str(datetime.date.today()) + ".csv"):
+            dates_available = pickle.load(open("spy_price_cache_" + str(datetime.date.today()) + ".csv", "r"))
+        else:
+            prices_available = yahoo.webload_symbol_price("SPY", begin_date, end_date)
+            dates_available = set(timestamp.to_pydatetime() for timestamp in prices_available.index.tolist())
+            pickle.dump(dates_available, open("spy_price_cache_" + str(datetime.date.today()) + ".csv", "w"))
+
+        calendar = fcalendar.make_fcalendar(begin_date)
+        dates_expected = set([day for day in itertools.takewhile(lambda d: d <= end_date, calendar)])
+
+        dates_misaligned = dates_available.symmetric_difference(dates_expected)
+
+        self.assertEqual(len(dates_misaligned), 0)
 #pylint: enable=R0904
 
 if __name__ == '__main__':

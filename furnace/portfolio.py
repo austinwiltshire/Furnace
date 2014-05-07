@@ -1,65 +1,95 @@
 """ Portfolio tracking and optimization """
 
+import abc
+
+# pylint: disable=R0903
+#NOTE: too few public methods
 class PortfolioOptimizer(object):
     """ Given a forecast for a set of assets, returns the optimal weighting of each asset in a
     portfolio """
-    def __init__(self):
-        pass
+    __metaclass__ = abc.ABCMeta
 
-#TODO: use abstract base classes for this
-    def optimize(self, forecasts, date):
+#NOTE: do not add asset universe as an init param - strategy ensures that the same asset universe is passed in to
+#portfolio optimizer and weatherman
+
+    @abc.abstractmethod
+    def optimize(self, forecasts, asset_universe):
         """ Forecasts need to be able to back point to their asset class and thus implicitly define
         the asset universe """
-        raise Exception("Not implemented yet")
+        pass
+#pylint: enable=R0903
 
 def growth(begin_portfolio, end_portfolio):
-    """ The growth or reduction in value from the begin to the end """
-    return 1.0 + (end_portfolio.value() - begin_portfolio.value()) / begin_portfolio.value()
+    """ The growth or reduction in cash value from the begin to the end """
+    return 1.0 + (end_portfolio.cash_value() - begin_portfolio.cash_value()) / begin_portfolio.cash_value()
 
-#TODO: buy and hold is really a rebalancing rule - i.e., the trading period is from complete beginning to end.
-#100% stocks and 80% stocks and 20% bonds are both examples of a static portfolio with a buy and hold horizon
-class BuyAndHoldPortfolio(PortfolioOptimizer):
-    """ Purchases the SPY at the begining period and holds it to the end """
-    def __init__(self, begin_date):
-        super(BuyAndHoldPortfolio, self).__init__()
-        self._begin_date = begin_date
+# pylint: disable=R0903
+#NOTE: too many public methods
+class SingleAsset(PortfolioOptimizer):
+    """ A portfolio that holds a single asset - gets the asset to hold from its asset universe """
 
-    def optimize(self, forecasts, date):
-        """ Simply sets 100% weight to the first asset returned in the forecast """
-        return Portfolio([Position(forecasts[0].asset(), Share(1.0))], date)
+    def optimize(self, _, asset_universe):
+        """ We simply hold 100% of whatever asset we are restricted to """
+        assert asset_universe.cardinality() == 1
+        symbol = asset_universe.supported_symbols().pop()
+        return TargetPortfolio([Position(asset_universe.make_asset(symbol), Share(1.0))])
+#pylint: enable=R0903
 
-#TODO: this is really just a 'static strategy' for portfolios. It can be changed orthogonal to a rebalancing rule
-#and can have hard percentage targets to rebalance the value of the portfolio to.
-class MixedBuyAndHold(PortfolioOptimizer):
-    """ Purchases 80% SPY and 20% BIL """
-    def __init__(self, begin_date):
-        super(MixedBuyAndHold, self).__init__()
-        self._begin_date = begin_date
-        #TODO: could take in the asset names i want to track and then look them up in the forecasts
+# pylint: disable=R0903
+#NOTE: too few public methods, assumed will grow as portfolio optimizer grows
+class StaticTarget(PortfolioOptimizer):
+    """ Optimizes a portfolio towards a statically provided target """
+    def __init__(self, target):
+        self._target = target
 
-    def optimize(self, forecasts, date):
-        return Portfolio([Position(forecasts[0].asset(), Share(.8)), Position(forecasts[1].asset(), Share(.2))], date)
+    def optimize(self, _, asset_universe):
+        """ We flat out ignore the forecaster argument """
+        return self._target
+#pylint: enable=R0903
 
-class Portfolio:
+
+class Portfolio(object):
     """ A collection of assets and their share/holdings """
     def __init__(self, positions, date):
         self._positions = positions
         self._date = date
 
-    def value(self):
-        """ Returns the share of this portfolio times the price of the assets, roughly how much money you'd need for
-            'one share' of this portfolio """
-        #TODO: rename "index value" since it's not a true value as we don't really own mroe than 'one unit' over time
-        return sum([position.share().value(position.asset().price(self._date)) for position in self._positions])
+    def cash_value(self):
+        """ The cash value of this portfolio """
+        return sum([position.cash_value(self._date) for position in self._positions])
 
-    def on_date(self, date):
-        """ Returns a new portfolio who's positions are the same but the date is adjusted """
+    def reinvest_dividends(self, date):
+        """ Return a new portfolio adjusted for dividends accrued to date """
         assert date >= self._date
         return Portfolio([p.reinvest_dividends(self._date, date) for p in self._positions], date)
 
     def date(self):
         """ Getter for the date of this portfolio """
         return self._date
+
+    def rebalance(self, target_portfolio, date):
+        """ Rebalances this portfolio to the target's weightings """
+        return target_portfolio.create(self.reinvest_dividends(date).cash_value(), date)
+
+class TargetPortfolio(object):
+    """ Represents a unit portfolio who's weightings add up to 1 """
+
+    def __init__(self, positions):
+        self._positions = positions
+        assert Share.proportion([position.share() for position in self._positions]) == 1.0
+
+    def create(self, cash_value, date):
+        """ Creates a real portfolio with value to match this target """
+        return Portfolio([Position(position.asset(), position.share() * cash_value) for position in self._positions],
+                         date)
+
+    def index_portfolio(self, date):
+        """ Creates a real portfolio with cash value of 1.0, useful for indexing """
+        #NOTE: for now, indexing just starts at a dollar. But eventually we need to take into account comissions and
+        #indecies have no way to do something like that, so they'd be comission agnostic. An indexed portfolio may
+        #need to be a completely different type that works like a portfolio object but is initialized to a value of 1.0
+        #and pays no comissions. It may even have more loose rules regarding bid vs ask.
+        return self.create(1.0, date)
 
 class Position(object):
     """ Represents a certain holding of an asset """
@@ -77,6 +107,10 @@ class Position(object):
         """ Getter for the share """
         return self._share
 
+    def cash_value(self, date):
+        """ Returns the cash value of this position """
+        return self._share.cash_value(self._asset.price(date))
+
     def reinvest_dividends(self, begin, end):
         """ Creates a new position with the share adjusted for reinvested dividends between begin
             and end dates """
@@ -86,6 +120,9 @@ class Position(object):
         dividends_accrued = (1.0 + self._asset.yield_accrued(end)) if begin != end else 1.0
         return Position(self._asset, self._share * dividends_received * dividends_accrued)
 
+
+# pylint: disable=R0903
+#NOTE: too many public methods
 class Share(object):
     """ Represents a holding an asset """
     def __init__(self, share):
@@ -94,6 +131,15 @@ class Share(object):
     def __mul__(self, rhs):
         return Share(self._share * rhs)
 
-    def value(self, price):
-        """ Returns the value of this share given a price """
+    def cash_value(self, price):
+        """ Returns the cash value of this share given a price """
         return price * self._share
+
+    @staticmethod
+# pylint: disable=W0212
+# NOTE: not private access as we use a static method on the class itself
+    def proportion(shares):
+        """ Returns the total proportion that shares represent from 0% to 100% """
+        assert all(isinstance(share, Share) for share in shares)
+        return sum(share._share for share in shares)
+#pylint: enable=R0903,W0212

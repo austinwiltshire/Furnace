@@ -1,54 +1,42 @@
 """ Module grabs interesting data from yahoo """
 
-import datetime
-import csv
 import pandas
+import urllib2
 
-def make_price_line(line):
-    """ Creates a data structure from a line from a yahoo csv file """
-    #TODO: probably put into data frame format
-    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d"),
-            "Open":float(line[1]),
-            "High":float(line[2]),
-            "Low":float(line[3]),
-            "Close":float(line[4]),
-            "Volume":int(line[5]),
-            "Adjusted Close":float(line[6])}
-
-def load_yahoo_csv_file(filename):
-    """ Loads a yahoo formatted CSV file and strips header """
-    return [line for line in csv.reader(open(filename))][1:]
+def load_symbol(price_file, dividend_file):
+    """ Reads in a symbol from price and dividend files """
+    prices = pandas.read_csv(price_file, index_col="Date", parse_dates=True)
+    dividends = pandas.read_csv(dividend_file, index_col="Date", parse_dates=True)
+    return pandas.concat([prices, dividends], axis=1)
 
 #NOTE: data_cache will be eager loaded (current design, anyway)
-def load_price_csv_file(filename):
-    """ Loads a yahoo csv file """
-    price_lines = [make_price_line(line) for line in load_yahoo_csv_file(filename)]
-    return dict([(price_line["Date"], price_line) for price_line in price_lines])
-
-def make_dividend_line(line):
-    """ Parses a dividend line from a yahoo dividend csv file """
-    return {"Date":datetime.datetime.strptime(line[0], "%Y-%m-%d"),
-            "Dividend":float(line[1])}
-
-def load_dividend_csv_file(filename):
-    """ Loads a csv file with dividend format """
-    dividend_lines = [make_dividend_line(line) for line in load_yahoo_csv_file(filename)]
-    return dict([(dividend_line["Date"], dividend_line) for dividend_line in dividend_lines])
-
 def load_pandas():
     """ Loads required data files. Experimental """
-    pandas_data = {"SPY" : {"price" : pandas.read_csv("data/spy.csv", index_col="Date", parse_dates=True),
-                            "dividends" : pandas.read_csv("data/spy_div.csv", index_col="Date", parse_dates=True)},
-                   "LQD" : {"price" : pandas.read_csv("data/lqd.csv", index_col="Date", parse_dates=True),
-                            "dividends" : pandas.read_csv("data/lqd_div.csv", index_col="Date", parse_dates=True)}}
-    for key in pandas_data.keys():
-        pandas_data[key]["all"] = pandas.concat([pandas_data[key]["price"], pandas_data[key]["dividends"]], axis=1)
+
+    pandas_data = {}
+
+    pandas_data["SPY"] = load_symbol("data/spy.csv", "data/spy_div.csv")
+    pandas_data["LQD"] = load_symbol("data/lqd.csv", "data/lqd_div.csv")
+
     return pandas_data
 
-def load():
-    """ Loads the yahoo spy csv file
-        Note: these files need to be located in the data or root directory """
-    return {"SPY" : {"price" : load_price_csv_file("data/spy.csv"),
-                     "dividends" : load_dividend_csv_file("data/spy_div.csv")},
-            "LQD" : {"price" : load_price_csv_file("data/lqd.csv"),
-                     "dividends" : load_dividend_csv_file("data/lqd_div.csv")}}
+def webload_symbol_price(symbol, begin_date, end_date):
+    """ Loads a symbol's price straight from the web """
+    query_params = {"symbol":symbol,
+                    "end_day":end_date.day,
+                    "end_month":end_date.month - 1,
+                    "end_year":end_date.year,
+                    "begin_day":begin_date.day,
+                    "begin_month":begin_date.month - 1,
+                    "begin_year":begin_date.year}
+    query_string = ("http://ichart.finance.yahoo.com/table.csv?"
+                    "s=%(symbol)s&"
+                    "d=%(end_month)d&"
+                    "e=%(end_day)d&"
+                    "f=%(end_year)d&"
+                    "g=d&"
+                    "a=%(begin_month)d&"
+                    "b=%(begin_day)d&"
+                    "c=%(begin_year)d"
+                    "&ignore=.csv") % query_params
+    return pandas.read_csv(urllib2.urlopen(query_string), index_col="Date", parse_dates=True)

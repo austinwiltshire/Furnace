@@ -5,34 +5,46 @@ A financial calendaring module using dateutil
 import datetime
 from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
 
-def nth_trading_day_after(a_date, nth):
-    """ Finds the nth trading day after aDate.  Takes into account holidays and weekends. """
+class FCalendar(object):
+    """ A financial calendar """
+    def __init__(self, daterule):
+        self._daterule = daterule
 
-    if a_date in ALL_TRADING_DAYS: #start so i'm always on a trading day.
-        trial_date = a_date
-    else:
-        trial_date = ALL_TRADING_DAYS.after(a_date)
+    def __iter__(self):
+        return iter(self._daterule)
 
-    if nth == 0: #in case we actually just want the trading day we passed in
+    def nth_trading_day_after(self, nth, a_date):
+        """ Finds the nth trading day after aDate.  Takes into account holidays and weekends. """
+
+        if a_date in self._daterule: #start so i'm always on a trading day.
+            trial_date = a_date
+        else:
+            trial_date = self._daterule.after(a_date)
+
+        if nth == 0: #in case we actually just want the trading day we passed in
+            return trial_date
+
+        for _ in range(nth):
+            trial_date = self._daterule.after(trial_date)
         return trial_date
 
-    for _ in range(nth):
-        trial_date = ALL_TRADING_DAYS.after(trial_date)
-    return trial_date
+    def nth_trading_day_before(self, nth, a_date):
+        """ Finds the nth trading day before aDate.  Takes into account holidays and weekends. """
+        trial_date = a_date
 
-def nth_trading_day_before(a_date, nth):
-    """ Finds the nth trading day before aDate.  Takes into account holidays and weekends. """
-    trial_date = a_date
+        if nth == 0: #in case we actually just want the trading day we passed in
+            if a_date in self._daterule:
+                return a_date
+            else:
+                return self._daterule.before(a_date)
 
-    if nth == 0: #in case we actually just want the trading day we passed in
-        if a_date in ALL_TRADING_DAYS:
-            return a_date
-        else:
-            return ALL_TRADING_DAYS.before(a_date)
+        for _ in range(nth):
+            trial_date = self._daterule.before(trial_date)
+        return trial_date
 
-    for _ in range(nth):
-        trial_date = ALL_TRADING_DAYS.before(trial_date)
-    return trial_date
+def make_fcalendar(begin_date):
+    """ Factory function for financial calendars """
+    return FCalendar(build_trading_date_rule(begin_date))
 
 #Move all dicts out to global scope such that they are only built once.
 def build_trading_date_rule(begin_date):
@@ -50,7 +62,9 @@ def build_trading_date_rule(begin_date):
 
     acts_of_god = {"SnowDay":datetime.datetime(1969, 2, 10), #apparently horrible weather and snow.
             "NewYorkCityBlackout":datetime.datetime(1977, 7, 14),
-            "HurricaneGloria":datetime.datetime(1985, 9, 27)}
+            "HurricaneGloria":datetime.datetime(1985, 9, 27),
+            "HurricaneSandy1":datetime.datetime(2012, 10, 29),
+            "HurricaneSandy2":datetime.datetime(2012, 10, 30)}
 
     acts_of_war = {"WorldTradeCenter1":datetime.datetime(2001, 9, 11),
             "WorldTradeCenter2":datetime.datetime(2001, 9, 12),
@@ -124,8 +138,7 @@ def build_trading_date_rule(begin_date):
     trading_dates.rrule(rrule(DAILY, byweekday=(MO, TU, WE, TH, FR), dtstart=begin_date))
     for holiday in holidays.values():
         trading_dates.exrule(holiday)
+    for exception_date in exception_dates.values():
+        trading_dates.exdate(exception_date)
 
     return trading_dates
-
-#builds the most conservative date rule - this tends to be slow to access!
-ALL_TRADING_DAYS = build_trading_date_rule(datetime.date(1960, 1, 1))
