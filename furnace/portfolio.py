@@ -76,7 +76,7 @@ class TargetPortfolio(object):
 
     def __init__(self, positions):
         self._positions = positions
-        assert sum(position.share()._share for position in self._positions) == 1
+        assert Share.proportion([position.share() for position in self._positions]) == 1.0
 
     def create(self, cash_value, date):
         """ Creates a real portfolio with value to match this target """
@@ -141,5 +141,5 @@ class Share(object):
     def proportion(shares):
         """ Returns the total proportion that shares represent from 0% to 100% """
         assert all(isinstance(share, Share) for share in shares)
-        return sum(share._share for share in shares) == 1
+        return sum(share._share for share in shares)
 #pylint: enable=R0903,W0212
