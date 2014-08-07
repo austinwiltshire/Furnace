@@ -1,6 +1,8 @@
 """ Portfolio tracking and optimization """
 
 import abc
+import pandas
+import numpy
 
 # pylint: disable=R0903
 #NOTE: too few public methods
@@ -19,8 +21,8 @@ class PortfolioOptimizer(object):
         pass
 #pylint: enable=R0903
 
-def growth(begin_portfolio, end_portfolio):
-    """ The growth or reduction in cash value from the begin to the end """
+def total_return(begin_portfolio, end_portfolio):
+    """ Price return and Dividend return """
     return 1.0 + (end_portfolio.cash_value() - begin_portfolio.cash_value()) / begin_portfolio.cash_value()
 
 # pylint: disable=R0903
@@ -47,12 +49,71 @@ class StaticTarget(PortfolioOptimizer):
         return self._target
 #pylint: enable=R0903
 
+class Weighting(object):
+    def __init__(self, asset, weight):
+        self._asset = asset
+        self._weight = weight
+
+    def asset(self):
+        return self._asset
+
+    def weight(self):
+        return self._weight
+
+def make_index(weightings, date):
+    """ Returns an index object from a list of weightings. Weightings must add
+    up to 1.0 """
+    assert numpy.isclose(sum(weighting.weight() for weighting in weightings), 1.0)
+
+    #computes the decomposed total return of a weighted asset
+    #TODO: add a regression test around this - should have same return as adjusted close of spy for same period
+    def make_partial_index(weighting):
+        """ Helper method adds necessary columns to a table """
+        table = weighting.asset().table()[['Close', 'Dividends']]
+        table = table[table.index >= date]
+
+        accumulated_yields = ((table['Dividends'] / table['Close']) + 1.0).dropna().cumprod()
+        initial_basis = weighting.weight() / table.ix[date]['Close']
+
+        #NOTE: we assume dividends are reinvested on the day of
+        adjusted_basis = accumulated_yields.reindex(table.index, method='ffill', fill_value=1.0) * initial_basis
+
+        series = table['Close'] * adjusted_basis
+        series.name = weighting.asset().symbol() + "_partial_adjusted_value"
+
+#        import IPython
+#        IPython.embed()
+        return series
+
+    index_value = pandas.concat([make_partial_index(weighting) for weighting in weightings], axis=1).sum(axis=1)
+#    index_value = pandas.concat([make_partial_index(weighting) for weighting in weightings], axis=1)
+    return Index(index_value, weightings, date)
+
+class Index(object):
+    """ A collection of assets held by weighting indexed to 1.0 on date """
+
+    def __init__(self, table, weightings, date):
+        self.table = table
+        self._weightings = weightings
+        self._date = date
+
+    def total_return_by(self, date):
+        """ Calculates total return by a certain date """
+        assert date >= self._date
+
+        return self.table[date] - 1.0
 
 class Portfolio(object):
     """ A collection of assets and their share/holdings """
     def __init__(self, positions, date):
         self._positions = positions
         self._date = date
+
+    def make_index(self):
+        """ Returns the index equivalent of this portfolio """
+        total_basis = self.cash_value()
+        weightings = [position.as_weight(total_basis, self.date()) for position in self._positions]
+        return make_index(weightings, self.date())
 
     def cash_value(self):
         """ The cash value of this portfolio """
@@ -114,15 +175,30 @@ class Position(object):
     def reinvest_dividends(self, begin, end):
         """ Creates a new position with the share adjusted for reinvested dividends between begin
             and end dates """
-        dividends_received = 1.0 + self._asset.yield_between(begin, end)
+        dividend_yield = 1.0 + self._asset.yield_between(begin, end)
+        return Position(self._asset, self._share * dividend_yield)
 
-        #accrue dividends for future growth to smooth unless we actually haven't had time to
-        dividends_accrued = (1.0 + self._asset.yield_accrued(end)) if begin != end else 1.0
-        return Position(self._asset, self._share * dividends_received * dividends_accrued)
+    def as_weight(self, total, date):
+        """ Creates a weighting representing this position assuming the total portfolio value is total """
+        return Weighting(self.asset(), self.cash_value(date) / total)
+
+class Weight(object):
+    """ An asset and a % weight it will be held in an index """
+    def __init__(self, asset, weight):
+        """ Asset is an asset table, weight is a real currently between 0 and
+        1.0. Weights higher than 1.0 can be added later to support margin
+        accounts, and less than 0.0 to support shorting """
+        assert weight <= 1.0
+        self._asset = asset
+        self._weight = weight
+
+    def price(self, date):
+        """ why do you want to know the price? """
+        pass
 
 
 # pylint: disable=R0903
-#NOTE: too many public methods
+#NOTE: too few public methods
 class Share(object):
     """ Represents a holding an asset """
     def __init__(self, share):

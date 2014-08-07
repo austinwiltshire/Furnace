@@ -13,9 +13,9 @@ import numpy
 #NOTE: too many public methods
 class NumpyTest(unittest.TestCase):
     """ A test case that uses some numpy extensions """
-    def assert_close(self, float1, float2):
+    def assert_close(self, float1, float2, rtol=1e-05, atol=1e-08):
         """ Checks whether two floats are close to eachother """
-        self.assertTrue(numpy.isclose(float1, float2))
+        self.assertTrue(numpy.isclose(float1, float2, rtol, atol))
 # pylint: enable=R0904
 
 # pylint: disable=R0904
@@ -46,7 +46,7 @@ class TestBuyAndHold(FurnaceTest):
         """ Tests the simplest buy and hold strategy """
 
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
-        self.assert_close(performance_.cagr(), 1.02763283748)
+        self.assert_close(performance_.cagr(), 1.027589)
 
     def test_index(self):
         """ Regression Tests indexing a strategy with a base index """
@@ -54,9 +54,9 @@ class TestBuyAndHold(FurnaceTest):
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
 
         self.assert_close(performance_.growth_by(datetime.datetime(2001, 1, 2)), 1.00)
-        self.assert_close(performance_.growth_by(datetime.datetime(2001, 2, 1)), 1.073378)
-        self.assert_close(performance_.growth_by(datetime.datetime(2002, 1, 2)), 0.90881805)
-        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.387037)
+        self.assert_close(performance_.growth_by(datetime.datetime(2001, 2, 1)), 1.070802)
+        self.assert_close(performance_.growth_by(datetime.datetime(2002, 1, 2)), 0.908446)
+        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.386320)
 # pylint: enable=R0904
 
 # pylint: disable=R0904
@@ -77,7 +77,7 @@ class TestBondsAndStocks(FurnaceTest):
         """ REGRESSION tests mixed portfolio """
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
 
-        self.assert_close(performance_.cagr(), 1.06607730908)
+        self.assert_close(performance_.cagr(), 1.066018)
 
     def test_index(self):
         """ REGRESSION tests mixed portfolio """
@@ -85,16 +85,65 @@ class TestBondsAndStocks(FurnaceTest):
 
         #NOTE: this check below should always be true, i.e., index on start date is always 100
         self.assert_close(performance_.growth_by(datetime.datetime(2003, 1, 2)), 1.0)
-        self.assert_close(performance_.growth_by(datetime.datetime(2003, 2, 3)), 0.9637734)
-        self.assert_close(performance_.growth_by(datetime.datetime(2004, 1, 2)), 1.207003)
-        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.896545)
+        self.assert_close(performance_.growth_by(datetime.datetime(2003, 2, 3)), 0.962289)
+        self.assert_close(performance_.growth_by(datetime.datetime(2004, 1, 2)), 1.206420)
+        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.895492)
+
+    def test_new_index_spy(self):
+        """ Test that new pandas style index matches up with returns for spy calculated via adjusted close """
+        from furnace import portfolio
+
+        index = portfolio.make_index([portfolio.Weighting(self.asset_factory.make_asset("SPY"), 1.0)],
+                                     datetime.datetime(2003, 1, 2))
+
+        #calculate yahoo's dividend adjusted return
+        spy = self.asset_factory.make_asset("SPY")
+        adj_close = spy.table()[spy.table().index >= datetime.datetime(2003, 1, 2)]['Adj Close']
+        first = adj_close.ix[0]
+        last = adj_close.ix[len(adj_close)-1]
+        adj_return = (last - first) / first
+
+        self.assert_close(index.total_return_by(datetime.datetime(2012, 12, 31)), adj_return, rtol=1e-03)
+
+    def test_new_index_lqd(self):
+        """ Test that new pandas style index matches up with returns for lqd calculated via adjusted close """
+        from furnace import portfolio
+
+        index = portfolio.make_index([portfolio.Weighting(self.asset_factory.make_asset("LQD"), 1.0)],
+                                     datetime.datetime(2003, 1, 2))
+
+        #calculate yahoo's dividend adjusted return
+        lqd = self.asset_factory.make_asset("LQD")
+        adj_close = lqd.table()[lqd.table().index >= datetime.datetime(2003, 1, 2)]['Adj Close']
+        first = adj_close.ix[0]
+        last = adj_close.ix[len(adj_close)-1]
+        adj_return = (last - first) / first
+
+        self.assert_close(index.total_return_by(datetime.datetime(2012, 12, 31)), adj_return, rtol=1e-03)
+
+    def test_new_index_spy_lqd(self):
+        """ REGRESSION test of a half and half indexed portfolio """
+        #NOTE: Adjusted close floats with time, meaning with different data adjusted close changes even on the same
+        #dates. This does not always seem geometrically stable as long term returns can shift even though they've
+        #'already' happened. This is one benefit of using one stable understood system than relying on yahoo's black
+        #magic adjusted close.
+        from furnace import portfolio
+
+        index = portfolio.make_index([portfolio.Weighting(self.asset_factory.make_asset("LQD"), 0.5),
+                                      portfolio.Weighting(self.asset_factory.make_asset("SPY"), 0.5)],
+                                     datetime.datetime(2003, 1, 2))
+
+        adj_return = .883 #pre calculated
+        self.assert_close(index.total_return_by(datetime.datetime(2012, 12, 31)), adj_return, rtol=1e-03)
 
     def test_volatility(self):
         """ TDD smoke test """
+        from furnace import portfolio
 
         performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
-
         vol = performance_.volatility()
+
+        self.assert_close(vol, 0.163339)
 # pylint: enable=R0904
 
 # pylint: disable=R0904

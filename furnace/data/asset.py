@@ -49,6 +49,20 @@ class Asset(object):
         self._data_cache = data_cache
         self._calendar = calendar
 
+        #to generate series of daily percent growths
+        #df = self._data_cache
+        #lag = df["Close"].shift()
+        #df["CapitalGains"] = (df["Close"] - lag) / lag
+        #this leaves first variable as NaN, btw
+
+    def table(self):
+        """ Accessor for the table this object is based on """
+        return self._data_cache
+
+    def symbol(self):
+        """ Accessor for symbol this object is based on """
+        return self._symbol
+
     def _get_data_cache(self):
         """ A concatenated list of dividends and prices in pandas format """
         return self._data_cache
@@ -87,10 +101,10 @@ class Asset(object):
         """ Returns the dividend yield (raw dividends / share price at the time) between begin and end """
         assert begin <= end, "Beginning date should happen before or during end date"
 
-        dividends = self._get_data_cache()[["Dividends", "Close"]].dropna()
+        dividends = self._get_data_cache().dropna()
         clamped_dividends = dividends[(dividends.index > begin) & (dividends.index <= end)]
         yields = (clamped_dividends["Dividends"] / clamped_dividends["Close"]) + 1.0
-        return reduce(operator.mul, yields, 1.0) - 1.0
+        return yields.prod() - 1.0 if not yields.empty else 0.0
 
     def _expected_daily_accrued_yield(self):
         """ Returns the expected daily, non compounded, yield of this asset """
