@@ -1,201 +1,157 @@
-""" Tests strategies and tests known metrics. REGRESSION style tests simply test that known outputs from the models
-    do not vary with changes - there is no guarantee that their original values are correct. In many cases, a
-    combination of audit (print outputs and calculations, hand check a sample), code review or back of the envelope
-    calculations have been used to sanity check the outputs of regression style tests. """
+""" Tests strategies and tests known metrics.
 
-import unittest
-import datetime
+    REGRESSION style tests simply test that known outputs from the models
+    Other tests have been hand checked generally using yahoo data. Yahoo data drifts, so usually download at one time
+    and reuse that data over and over again.
+
+    All written in py.test style.
+    to run,
+
+    pip install pytest
+
+    in Furnace directory,
+    >py.test
+    """
+
+from datetime import datetime
 from furnace.data import asset, yahoo, fcalendar
-from furnace import performance, strategy
+from furnace import performance, strategy, portfolio
 import numpy
 
-# pylint: disable=R0904
-#NOTE: too many public methods
-class NumpyTest(unittest.TestCase):
-    """ A test case that uses some numpy extensions """
-    def assert_close(self, float1, float2, rtol=1e-05, atol=1e-08):
-        """ Checks whether two floats are close to eachother """
-        self.assertTrue(numpy.isclose(float1, float2, rtol, atol))
-# pylint: enable=R0904
+def is_close(val, other_val):
+    """ Checks two floating points are 'close enough'.
 
-# pylint: disable=R0904
-#NOTE: too many public methods
-class FurnaceTest(NumpyTest):
-    """ Test type that tests the furnace module """
+        A relative difference of 3 usually is 'close enough' given that we check against yahoo data a lot """
+    return numpy.isclose(val, other_val, rtol=1e-03)
 
-    def setUp(self):
-        """ Initialize fixture """
-        self.data_cache = yahoo.load_pandas()
-        self.calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
-# pylint: enable=R0904
+def make_default_asset_factory(symbols):
+    """ Helper method returns an asset factory for a list of symbols with a calendar starting at 2000-1-1 """
 
-# pylint: disable=R0904
-#NOTE: too many public methods
-class TestBuyAndHold(FurnaceTest):
-    """ Integration test of trading strategies """
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    data_cache = yahoo.load_pandas()
+    return asset.AssetUniverse(symbols, data_cache, calendar)
 
-    def setUp(self):
-        """ Initialize fixture """
-        super(TestBuyAndHold, self).setUp()
-        self.begin = datetime.datetime(2001, 1, 2)
-        self.end = datetime.datetime(2012, 12, 31)
-        self.asset_factory = asset.AssetUniverse(["SPY"], self.data_cache, self.calendar)
-        self.strategy = strategy.buy_and_hold_stocks(self.asset_factory, self.begin, self.end)
+def yahoo_adjusted_close_return(asset_, begin, end):
+    """ Helper to calculate dividend and split adjusted total return using yahoo stats """
+    adj_close = asset_.table()[asset_.table().index >= datetime(2003, 1, 2)]['Adj Close']
+    first = adj_close[begin]
+    last = adj_close[end]
+    return (last - first) / first
 
-    def test_buy_and_hold(self):
-        """ Tests the simplest buy and hold strategy """
+def test_buy_and_hold_spy_cagr():
+    """ Tests a buy and hold CAGR of the SPY from 1-2-3003 to 12-31-2012
+    as of aug 18, validated with adj close from yahoo
+    """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY"])
 
-        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
-        self.assert_close(performance_.cagr(), 1.027589)
+    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    def test_index(self):
-        """ Regression Tests indexing a strategy with a base index """
+    assert is_close(performance_.cagr(), 1.067)
 
-        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
+def test_all_spy_index_total_return():
+    """ Tests the total return of an all SPY index between 2003-1-2 and 2012-12-31 is same as yahoo adj return
+        for same period """
 
-        self.assert_close(performance_.growth_by(datetime.datetime(2001, 1, 2)), 1.00)
-        self.assert_close(performance_.growth_by(datetime.datetime(2001, 2, 1)), 1.070802)
-        self.assert_close(performance_.growth_by(datetime.datetime(2002, 1, 2)), 0.908446)
-        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.386320)
-# pylint: enable=R0904
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY"])
+    spy = asset_factory.make_asset("SPY")
 
-# pylint: disable=R0904
-#NOTE: too many public methods
-class TestBondsAndStocks(FurnaceTest):
-    """ Test various metrics on a buy and hold portfolio that is 90% stocks and 10% bonds """
+    index = portfolio.make_index([portfolio.Weighting(spy, 1.0)], begin)
+    adj_return = yahoo_adjusted_close_return(spy, begin, end)
 
-    def setUp(self):
-        """ Initialize fixture """
-        super(TestBondsAndStocks, self).setUp()
-        self.begin = datetime.datetime(2003, 1, 2)
-        self.end = datetime.datetime(2012, 12, 31)
-        self.asset_factory = asset.AssetUniverse(["SPY", "LQD"], self.data_cache, self.calendar)
-        self.strategy = strategy.buy_and_hold_stocks_and_bonds(self.asset_factory, self.begin, self.end)
+    assert is_close(index.total_return_by(datetime(2012, 12, 31)), adj_return)
 
+def test_all_lqd_index_total_return():
+    """ Test that all lqd index has total return equal to yahoo adj close from 2003-1-2 to 2012-12-31 """
 
-    def test_buy_and_hold(self):
-        """ REGRESSION tests mixed portfolio """
-        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["LQD"])
+    lqd = asset_factory.make_asset("LQD")
 
-        self.assert_close(performance_.cagr(), 1.066018)
+    index = portfolio.make_index([portfolio.Weighting(lqd, 1.0)], begin)
+    adj_return = yahoo_adjusted_close_return(lqd, begin, end)
 
-    def test_index(self):
-        """ REGRESSION tests mixed portfolio """
-        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
+    assert is_close(index.total_return_by(datetime(2012, 12, 31)), adj_return)
 
-        #NOTE: this check below should always be true, i.e., index on start date is always 100
-        self.assert_close(performance_.growth_by(datetime.datetime(2003, 1, 2)), 1.0)
-        self.assert_close(performance_.growth_by(datetime.datetime(2003, 2, 3)), 0.962289)
-        self.assert_close(performance_.growth_by(datetime.datetime(2004, 1, 2)), 1.206420)
-        self.assert_close(performance_.growth_by(datetime.datetime(2012, 12, 31)), 1.895492)
+def test_buy_and_hold_spy_growth_by():
+    """ Tests buy and hold single asset spy growth_by at multiple points between 2003-1-2 and 2012-12-31
+    hand confirmed as of aug 18 using yahoo adj close """
 
-    def test_new_index_spy(self):
-        """ Test that new pandas style index matches up with returns for spy calculated via adjusted close """
-        from furnace import portfolio
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY"])
+    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end)
 
-        index = portfolio.make_index([portfolio.Weighting(self.asset_factory.make_asset("SPY"), 1.0)],
-                                     datetime.datetime(2003, 1, 2))
+    performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-        #calculate yahoo's dividend adjusted return
-        spy = self.asset_factory.make_asset("SPY")
-        adj_close = spy.table()[spy.table().index >= datetime.datetime(2003, 1, 2)]['Adj Close']
-        first = adj_close.ix[0]
-        last = adj_close.ix[len(adj_close)-1]
-        adj_return = (last - first) / first
+    assert is_close(performance_.growth_by(datetime(2003, 1, 2)), 1.00)
+    assert is_close(performance_.growth_by(datetime(2004, 2, 2)), 1.272)
+    assert is_close(performance_.growth_by(datetime(2005, 1, 3)), 1.368)
+    assert is_close(performance_.growth_by(datetime(2012, 12, 31)), 1.906)
 
-        self.assert_close(index.total_return_by(datetime.datetime(2012, 12, 31)), adj_return, rtol=1e-03)
+def test_bh_stocks_and_bonds_cagr():
+    """ Tests buy and hold of two assets, spy and lqd, cagr metric from 2003-1-2 to 2012-12-31
 
-    def test_new_index_lqd(self):
-        """ Test that new pandas style index matches up with returns for lqd calculated via adjusted close """
-        from furnace import portfolio
+        stocks and bonds strategy assumes static holding of 80% stocks and 20% bonds
+        hand checked on august 20th """
 
-        index = portfolio.make_index([portfolio.Weighting(self.asset_factory.make_asset("LQD"), 1.0)],
-                                     datetime.datetime(2003, 1, 2))
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
 
-        #calculate yahoo's dividend adjusted return
-        lqd = self.asset_factory.make_asset("LQD")
-        adj_close = lqd.table()[lqd.table().index >= datetime.datetime(2003, 1, 2)]['Adj Close']
-        first = adj_close.ix[0]
-        last = adj_close.ix[len(adj_close)-1]
-        adj_return = (last - first) / first
+    performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-        self.assert_close(index.total_return_by(datetime.datetime(2012, 12, 31)), adj_return, rtol=1e-03)
+    assert is_close(performance_.cagr(), 1.066)
 
-    def test_new_index_spy_lqd(self):
-        """ REGRESSION test of a half and half indexed portfolio """
-        #NOTE: Adjusted close floats with time, meaning with different data adjusted close changes even on the same
-        #dates. This does not always seem geometrically stable as long term returns can shift even though they've
-        #'already' happened. This is one benefit of using one stable understood system than relying on yahoo's black
-        #magic adjusted close.
-        from furnace import portfolio
+def test_bh_stcks_n_bnds_growth_by():
+    """ Tests buy and hold stocks and bonds strategy with two assets, spy and lqd, looking at growth by at multiple
+        points between 2003-1-2 and 2012-12-31.
 
-        index = portfolio.make_index([portfolio.Weighting(self.asset_factory.make_asset("LQD"), 0.5),
-                                      portfolio.Weighting(self.asset_factory.make_asset("SPY"), 0.5)],
-                                     datetime.datetime(2003, 1, 2))
+        hand checked august 20 against yahoo adj close """
 
-        adj_return = .883 #pre calculated
-        self.assert_close(index.total_return_by(datetime.datetime(2012, 12, 31)), adj_return, rtol=1e-03)
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
 
-    def test_volatility(self):
-        """ TDD smoke test """
-        from furnace import portfolio
+    performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-        performance_ = performance.fire_furnace(self.strategy, self.begin, self.end)
-        vol = performance_.volatility()
+    assert is_close(performance_.growth_by(datetime(2003, 1, 2)), 1.0)
+    assert is_close(performance_.growth_by(datetime(2003, 2, 3)), 0.960)
+    assert is_close(performance_.growth_by(datetime(2004, 1, 2)), 1.214)
+    assert is_close(performance_.growth_by(datetime(2012, 12, 31)), 1.903)
 
-        self.assert_close(vol, 0.163339)
-# pylint: enable=R0904
+def test_spy_lqd_mix_index_ttl_rtn():
+    """ Test an index of 50% spy and 50% lqd, total_return_by, between 2003-1-2 and 2012-12-31
+     hand calculated on aug 20th with yahoo adj close """
 
-# pylint: disable=R0904
-#NOTE: too many public methods
-class TestAsset(NumpyTest):
-    """ Tests the asset class """
-    def setUp(self):
-        """ Load in data cache """
-        self.data_cache = yahoo.load_pandas()
-        self.calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
-        self.asset_factory = asset.AssetUniverse(["SPY"], self.data_cache, self.calendar)
-        self.spy = self.asset_factory.make_asset("SPY")
+    #NOTE: Adjusted close floats with time, meaning with different data adjusted close changes even on the same
+    #dates. This does not always seem geometrically stable as long term returns can shift even though they've
+    #'already' happened. This is one benefit of using one stable understood system than relying on yahoo's black
+    #magic adjusted close.
 
-    def test_average_yield(self):
-        """ REGRESSION Tests the average yield of SPY is each dividend divided by the price on the dividiend issue
-            date """
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
 
-        self.assert_close(self.spy.average_yield(), .00462926)
+    index = portfolio.make_index([portfolio.Weighting(asset_factory.make_asset("LQD"), 0.5),
+                                  portfolio.Weighting(asset_factory.make_asset("SPY"), 0.5)],
+                                 datetime(2003, 1, 2))
 
-    def test_average_period(self):
-        """ REGRESSION tests the average period of SPY is around 3 months """
+    assert is_close(index.total_return_by(datetime(2012, 12, 31)), .900)
 
-        self.assert_close(self.spy.average_dividend_period(), 89.54167)
+def test_volatility():
+    """ Tests volatility of a mixed stocks and bonds portfolio between 2003-1-2 adn 2012-12-31 """
 
-    def test_yield_between(self):
-        """ Tests the total compound yield of SPY between 2002-1-1 and 2002-12-31 is 1.58%. This has been hand
-            calculated"""
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
 
-        begin = datetime.datetime(2002, 1, 1)
-        end = datetime.datetime(2002, 12, 31)
-        self.assert_close(self.spy.yield_between(begin, end), 0.0158111178)
+    performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    def test_yield_accrued_middle(self):
-        """ Tests the yield accrued on 2006-05-01 for the SPY is .215% . This has been hand calculated """
-
-        self.assert_close(self.spy.yield_accrued(datetime.datetime(2006, 5, 1)), 0.002104682)
-
-    def test_yield_accrued_end(self):
-        """ At the end, we estimate yield by number of days since last dividend times the average yield.
-            This was hand calculated """
-
-        #last dividend issued on 12-21-12 in data set, making this 41 / average period days in.
-        self.assert_close(self.spy.yield_accrued(datetime.datetime(2013, 1, 31)), 0.0021196792)
-
-    def test_yield_accrued_early(self):
-        """ If we're within one average period of the first dividend, we take the proportion of that that we've
-            earned. Hand calculated """
-
-        #2001, 2, 1 occurs 43, so average_period - 43 / average period is dividend i've earned
-        self.assert_close(self.spy.yield_accrued(datetime.datetime(2001, 2, 1)),
-                        0.0024061812926227)
-# pylint: enable=R0904
-
-if __name__ == '__main__':
-    unittest.main()
+    assert is_close(performance_.volatility(), 0.168)

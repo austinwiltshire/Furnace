@@ -43,9 +43,8 @@ class Strategy(object):
         period_performances = []
         for trading_period in self.periods_during(begin_date, end_date):
             period_begin = trading_period.begin()
-            beginning_portfolio = self.target_portfolio_on(period_begin).index_portfolio(period_begin)
-            end_portfolio = beginning_portfolio.reinvest_dividends(trading_period.end())
-            period_performances.append(performance.PeriodPerformance(beginning_portfolio, end_portfolio))
+            index = self.target_weighting_on(period_begin).make_index_on(period_begin)
+            period_performances.append(performance.make_period_performance(begin_date, end_date, index))
         return performance.OverallPerformance(period_performances)
 
     def periods_during(self, begin_date, end_date):
@@ -58,7 +57,7 @@ class Strategy(object):
         """ Generate a forecast for this strategy """
         return self._forecaster.forecast(self._asset_universe, date, self._rebalancing_rule.period_length())
 
-    def target_portfolio_on(self, date):
+    def target_weighting_on(self, date):
         """ Generates a target portfolio this strategy would recommend for date """
 
         forecast = self.forecast(date)
@@ -114,6 +113,19 @@ def buy_and_hold_stocks(asset_universe, begin_date, end_date):
                     BuyAndHold(begin_date, end_date),
                     weathermen.NullForecaster())
 
+def buy_and_hold_bonds(asset_universe, begin_date, end_date):
+    """ Purchases the LQD at the beginning period and holds it to the end """
+
+    assert asset_universe.supports_date(begin_date)
+    assert asset_universe.supports_symbol("LQD")
+
+    asset_universe = asset_universe.restricted_to(["LQD"])
+
+    return Strategy(portfolio.SingleAsset(),
+                    asset_universe,
+                    BuyAndHold(begin_date, end_date),
+                    weathermen.NullForecaster())
+
 def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date):
     """ Purchases 80% SPY and 20% LQD """
 
@@ -121,12 +133,10 @@ def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date):
     assert asset_universe.supports_symbol("SPY")
     assert asset_universe.supports_symbol("LQD")
 
-    position = portfolio.Position
-    share = portfolio.Share
-
     lqd = asset_universe.make_asset("LQD")
     spy = asset_universe.make_asset("SPY")
-    target = portfolio.TargetPortfolio([position(spy, share(.8)), position(lqd, share(.2))])
+    target = portfolio.Weightings([portfolio.Weighting(spy, .8)
+                                 , portfolio.Weighting(lqd, .2)])
 
     return Strategy(portfolio.StaticTarget(target),
                     asset_universe.restricted_to(["SPY", "LQD"]),
