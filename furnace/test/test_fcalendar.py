@@ -89,6 +89,3 @@ class TestFCalendarRange(unittest.TestCase):
 
         self.assertEqual(len(dates_misaligned), 0)
 #pylint: enable=R0904
-
-if __name__ == '__main__':
-    unittest.main()

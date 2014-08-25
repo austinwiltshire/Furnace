@@ -100,45 +100,45 @@ class BuyAndHold(RebalancingRule):
         """ Returns the length of the buy and hold period """
         return (self._end_date - self._begin_date).days
 
-def buy_and_hold_stocks(asset_universe, begin_date, end_date):
-    """ Purchases the SPY at the beginning period and holds it to the end """
+#family strategies
+def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
+    """ Purchases a single asset at the beginning of the period and holds it to the end.
+    Represents a family of potential strategies """
 
     assert asset_universe.supports_date(begin_date)
-    assert asset_universe.supports_symbol("SPY")
+    assert asset_universe.supports_symbol(symbol)
 
-    asset_universe = asset_universe.restricted_to(["SPY"])
+    asset_universe = asset_universe.restricted_to([symbol])
 
     return Strategy(portfolio.SingleAsset(),
                     asset_universe,
                     BuyAndHold(begin_date, end_date),
                     weathermen.NullForecaster())
+
+def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weights):
+    """ Purchses a set of assets with specific weights at the beginning of the period and holds them to the end.
+    Represents a family of buy and hold multi asset strategies that vary on asset mix and weights """
+
+    assert asset_universe.supports_date(begin_date)
+
+    assert all(asset_universe.supports_symbol(symbol) for symbol in symbols)
+    weightings = portfolio.Weightings([portfolio.Weighting(asset_universe.make_asset(symbol), weight)
+                                       for symbol, weight in zip(symbols, weights)])
+
+    return Strategy(portfolio.StaticTarget(weightings),
+                    asset_universe.restricted_to(symbols),
+                    BuyAndHold(begin_date, end_date),
+                    weathermen.NullForecaster())
+
+#particular strategies
+def buy_and_hold_stocks(asset_universe, begin_date, end_date):
+    """ Purchases the SPY at the beginning period and holds it to the end """
+    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "SPY")
 
 def buy_and_hold_bonds(asset_universe, begin_date, end_date):
     """ Purchases the LQD at the beginning period and holds it to the end """
-
-    assert asset_universe.supports_date(begin_date)
-    assert asset_universe.supports_symbol("LQD")
-
-    asset_universe = asset_universe.restricted_to(["LQD"])
-
-    return Strategy(portfolio.SingleAsset(),
-                    asset_universe,
-                    BuyAndHold(begin_date, end_date),
-                    weathermen.NullForecaster())
+    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "LQD")
 
 def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date):
     """ Purchases 80% SPY and 20% LQD """
-
-    assert asset_universe.supports_date(begin_date)
-    assert asset_universe.supports_symbol("SPY")
-    assert asset_universe.supports_symbol("LQD")
-
-    lqd = asset_universe.make_asset("LQD")
-    spy = asset_universe.make_asset("SPY")
-    target = portfolio.Weightings([portfolio.Weighting(spy, .8)
-                                 , portfolio.Weighting(lqd, .2)])
-
-    return Strategy(portfolio.StaticTarget(target),
-                    asset_universe.restricted_to(["SPY", "LQD"]),
-                    BuyAndHold(begin_date, end_date),
-                    weathermen.NullForecaster())
+    return buy_and_hold_multi_asset(asset_universe, begin_date, end_date, ["SPY", "LQD"], [.8, .2])
