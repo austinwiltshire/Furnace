@@ -3,7 +3,6 @@
 import abc
 import pandas
 import numpy
-import portfolio
 
 # pylint: disable=R0903
 #NOTE: too few public methods
@@ -31,7 +30,7 @@ class SingleAsset(PortfolioOptimizer):
         """ We simply hold 100% of whatever asset we are restricted to """
         assert asset_universe.cardinality() == 1
         asset = [symbol for symbol in asset_universe][0]
-        return portfolio.Weightings([portfolio.Weighting(asset, 1.0)])
+        return Weightings([Weighting(asset, 1.0)])
 #pylint: enable=R0903
 
 # pylint: disable=R0903
@@ -46,6 +45,7 @@ class StaticTarget(PortfolioOptimizer):
         return self._target
 #pylint: enable=R0903
 
+# pylint: disable=R0903
 class Weightings(object):
     """ Represents multiple asset weights that add up to 1.0 """
     def __init__(self, weightings):
@@ -58,18 +58,24 @@ class Weightings(object):
         return iter(self._weightings)
 
     def make_index_on(self, date):
+        """ Creates an index of these weightings on date """
         return make_index(self, date)
-
+# pylint: enable=R0903
 
 class Weighting(object):
+    """ Represents a weight of an asset in a broader weighting scheme.
+
+    Could potentially support negative (short) and margin weights """
     def __init__(self, asset, weight):
         self._asset = asset
         self._weight = weight
 
     def asset(self):
+        """ Getter for asset """
         return self._asset
 
     def weight(self):
+        """ Getter for weight """
         return self._weight
 
 def make_index(weightings, date):
@@ -78,7 +84,6 @@ def make_index(weightings, date):
     assert numpy.isclose(sum(weighting.weight() for weighting in weightings), 1.0)
 
     #computes the decomposed total return of a weighted asset
-    #TODO: add a regression test around this - should have same return as adjusted close of spy for same period
     def make_partial_index(weighting):
         """ Helper method adds necessary columns to a table """
         table = weighting.asset().table()[['Close', 'Dividends']]
@@ -98,6 +103,7 @@ def make_index(weightings, date):
     index_value = pandas.concat([make_partial_index(weighting) for weighting in weightings], axis=1).sum(axis=1)
     return Index(index_value, weightings, date)
 
+# pylint: disable=R0903
 class Index(object):
     """ A collection of assets held by weighting indexed to 1.0 on date """
 
@@ -111,4 +117,5 @@ class Index(object):
         assert date >= self._date
 
         return self.table[date] - 1.0
+# pylint: enable=R0903
 

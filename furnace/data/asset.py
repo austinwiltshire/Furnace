@@ -3,10 +3,6 @@
     an asset might be better looked at as a table, rather than a pure OO abstraction. It represents all price data,
     not just one day's worth """
 
-import operator
-import numpy
-import datetime
-
 class AssetUniverse(object):
     """ Represents all tradable assets for any particular model. """
     def __init__(self, supported_symbols, data_cache, calendar):

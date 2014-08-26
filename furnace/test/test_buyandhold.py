@@ -18,6 +18,7 @@ from furnace.data import asset, yahoo, fcalendar
 from furnace import performance, strategy, portfolio
 import numpy
 
+#helpers
 def is_close(val, other_val):
     """ Checks two floating points are 'close enough'.
 
@@ -38,6 +39,7 @@ def yahoo_adjusted_close_return(asset_, begin, end):
     last = adj_close[end]
     return (last - first) / first
 
+#tests
 def test_buy_and_hold_spy_cagr():
     """ Tests a buy and hold CAGR of the SPY from 1-2-3003 to 12-31-2012
     as of aug 18, validated with adj close from yahoo
@@ -63,7 +65,7 @@ def test_all_spy_index_total_return():
     index = portfolio.make_index([portfolio.Weighting(spy, 1.0)], begin)
     adj_return = yahoo_adjusted_close_return(spy, begin, end)
 
-    assert is_close(index.total_return_by(datetime(2012, 12, 31)), adj_return)
+    assert is_close(index.total_return_by(end), adj_return)
 
 def test_all_lqd_index_total_return():
     """ Test that all lqd index has total return equal to yahoo adj close from 2003-1-2 to 2012-12-31 """
@@ -76,7 +78,21 @@ def test_all_lqd_index_total_return():
     index = portfolio.make_index([portfolio.Weighting(lqd, 1.0)], begin)
     adj_return = yahoo_adjusted_close_return(lqd, begin, end)
 
-    assert is_close(index.total_return_by(datetime(2012, 12, 31)), adj_return)
+    assert is_close(index.total_return_by(end), adj_return)
+
+def test_empty_mixed_index():
+    """ Tests that an index of multiple assets but logically single is the same as a single asset index """
+
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+    lqd = asset_factory.make_asset("LQD")
+    spy = asset_factory.make_asset("SPY")
+
+    index = portfolio.make_index([portfolio.Weighting(spy, 0.0), portfolio.Weighting(lqd, 1.0)], begin)
+    index2 = portfolio.make_index([portfolio.Weighting(lqd, 1.0)], begin)
+
+    assert is_close(index.total_return_by(end), index2.total_return_by(end))
 
 def test_buy_and_hold_spy_growth_by():
     """ Tests buy and hold single asset spy growth_by at multiple points between 2003-1-2 and 2012-12-31
@@ -89,10 +105,10 @@ def test_buy_and_hold_spy_growth_by():
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.growth_by(datetime(2003, 1, 2)), 1.00)
+    assert is_close(performance_.growth_by(begin), 1.00)
     assert is_close(performance_.growth_by(datetime(2004, 2, 2)), 1.272)
     assert is_close(performance_.growth_by(datetime(2005, 1, 3)), 1.368)
-    assert is_close(performance_.growth_by(datetime(2012, 12, 31)), 1.906)
+    assert is_close(performance_.growth_by(end), 1.906)
 
 def test_bh_stocks_and_bonds_cagr():
     """ Tests buy and hold of two assets, spy and lqd, cagr metric from 2003-1-2 to 2012-12-31
@@ -122,10 +138,10 @@ def test_bh_stcks_n_bnds_growth_by():
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.growth_by(datetime(2003, 1, 2)), 1.0)
+    assert is_close(performance_.growth_by(begin), 1.0)
     assert is_close(performance_.growth_by(datetime(2003, 2, 3)), 0.960)
     assert is_close(performance_.growth_by(datetime(2004, 1, 2)), 1.214)
-    assert is_close(performance_.growth_by(datetime(2012, 12, 31)), 1.903)
+    assert is_close(performance_.growth_by(end), 1.903)
 
 def test_spy_lqd_mix_index_ttl_rtn():
     """ Test an index of 50% spy and 50% lqd, total_return_by, between 2003-1-2 and 2012-12-31
@@ -155,3 +171,12 @@ def test_volatility():
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
     assert is_close(performance_.volatility(), 0.168)
+
+def test_single_asset_yearly():
+    """ TDD for single asset strategy but rebalanced yearly. Should be equivalent to buy and hold """
+    pass
+
+def test_multi_asset_yearly():
+    """ TDD for multi asset - 80% spy, 20% lqd, rebalanced yearly. Should be equivalent to two years of
+    buy and hold """
+    pass

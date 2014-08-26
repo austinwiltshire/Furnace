@@ -2,14 +2,12 @@
 
 # - equity curve (DONE)
 # - cagr (DONE)
-# - volatility
+# - volatility (DONE)
 # - max drawdown
 
 import numpy
-import operator
-import furnace.portfolio
 from furnace.data import fcalendar
-from furnace.filter import itertools_helpers, algorithm
+from furnace.filter import itertools_helpers
 import itertools
 import pandas
 
@@ -50,36 +48,6 @@ class OverallPerformance(object):
         """ Returns the compound annual growth rate """
         return pow(self.total_return(), 1.0 / (self.duration().days / 365.0))
 
-    #TODO: 
-    # i think i don't need to adjust for dividends. they'll be adjusted by the
-    # exchanges automatically. the price *drops* the day of the dividend by
-    # precisely the same amount as the yield, so the return for that day
-    # should overall be in line with what i expect. 
-    # the only thing i *should* do is keep in mind if i create cap gains
-    # separate models, there will be dividend effects on the div date that are
-    # secular to any cap gains movements. so if i want to predict just cap
-    # gains and dividends separately, i just need to account for that effect
-    # there but not when it comes to simply plotting performance.
-    #1. simple daily volatility over the entire period
-    #   a. add daily return to asset. Given a date, i need to know the capital gains for that day as a % DONE
-    #       i. need to figure out a lag DONE
-    #   b. add daily basis adjustment to asset. Given a date, i need to know how much of a basis/yield I got assuming
-    #       I accrue dividends on a daily basis and buy stock that day.
-    #       Currently trying to figure out how to create a new column in a data frame that's the next dividend date.
-    #       I'm able to get what I think is the correct date using the searchsorted function, feeding in dividend dates
-    #       as the first argument, dropping the indexes past the length of the number of dividends. I do not know how to
-    #       glue this new column as a series on to the old one. I think reindexing both to just integers would work?
-    #   c. both of the above should be columns on asset's data frame
-    #   d. portfolio's growth should simply be a multiplication of the above plus the addition of the basis/yield
-    #   QUESTION: do i need a basis on asset or just a daily yield and daily cap gains, and portfolio will be the one
-    #       that uses yield to grow basis and cap gains to adjust price?
-    #   NOTE: all of this should not change mathematically the answers to what i've found so far so regression tests
-    #       should still work even if i change the arithmatic. of course, some floating point error might be seen
-    #2. paramaterize on sample length - do trailing daily volatility of only a few months (this moves the 'beginnign)
-    #3. parameterize on window - given two dates, calculate weekly volatilty. (this moves the 'end')
-    #4. parameterize on period length - do trailing weekly volatility
-    #5. add parameterizations to cagr
-    #6. use the new tables to speed up index generation
     def volatility(self):
         """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility
@@ -91,22 +59,11 @@ class OverallPerformance(object):
         """ Returns growth by a date as a percent scaled against 100% on beginning date of this performance """
         return self._table["Cumulative Returns"][date]
 
-    def plot_index(self, subplot, index_base):
+    def plot_index(self, index_base):
         """ Plots a day by day performance, with day one pegged at value of index_base, on a matplotlib chart """
-        #NOTE: horribly inefficient. Some sort of memoization on growth_by would probably speed it up
-        #NOTE: probably just head towards a eager rule when it comes to
-        # prebuilding the performance tables.
-
-        dates = list(itertools.takewhile(lambda date: date <= self.end(),
-                     fcalendar.build_trading_date_rule(self.begin())))
 
         indecies = self._table["Cumulative Returns"] * index_base
-        indecies.plot()
-
-#        import IPython
-#        IPython.embed()
-
-#        subplot.plot(numpy.array([numpy.datetime64(d) for d in dates]), numpy.array(indecies))
+        return indecies.plot()
 
     def begin(self):
         """ Returns beginning date of this performance period """
