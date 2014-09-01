@@ -45,12 +45,6 @@ class Asset(object):
         self._data_cache = data_cache
         self._calendar = calendar
 
-        #to generate series of daily percent growths
-        #df = self._data_cache
-        #lag = df["Close"].shift()
-        #df["CapitalGains"] = (df["Close"] - lag) / lag
-        #this leaves first variable as NaN, btw
-
     def table(self):
         """ Accessor for the table this object is based on """
         return self._data_cache

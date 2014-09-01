@@ -6,9 +6,7 @@
 # - max drawdown
 
 import numpy
-from furnace.data import fcalendar
 from furnace.filter import itertools_helpers
-import itertools
 import pandas
 
 #NOTE: this used to be a single method on an object. Would make sense to refactor to that if we need to add more state
@@ -27,12 +25,9 @@ class OverallPerformance(object):
         assert not any(itertools_helpers.self_cartesian_map(portfolio_periods, PeriodPerformance.overlaps_with))
         self._table = pandas.DataFrame()
         self._table["Daily Returns"] = pandas.concat(period.daily_returns() for period in self._portfolio_periods)
-
-        #Set first day at 1.0 growth
         self._table["Cumulative Returns"] = (self._table["Daily Returns"] + 1.0).cumprod()
-        self._table["Cumulative Returns"][self.begin()] = 1.0
-        self._table["Daily Returns"][self.begin()] = 0.0
-        self._table = self._table.sort_index()
+        #import IPython
+        #IPython.embed()
 
     def total_return(self):
         """ Returns the total return from begining to end """
@@ -57,6 +52,8 @@ class OverallPerformance(object):
 
     def growth_by(self, date):
         """ Returns growth by a date as a percent scaled against 100% on beginning date of this performance """
+        if date == self.begin():
+            return 1.0
         return self._table["Cumulative Returns"][date]
 
     def plot_index(self, index_base):
@@ -82,15 +79,6 @@ def make_period_performance(begin_date, end_date, index):
     index = index[index.index >= begin][index.index <= end_date]
     table = pandas.DataFrame()
     table["Daily Returns"] = index.pct_change().dropna()
-    #Set first day at 0% returns
-    table.sort_index()
-    table["Cumulative Returns"] = (table["Daily Returns"] + 1.0).cumprod()
-
-    #Set first day at 1.0 growth, 0.0 return
-    base_date = pandas.DataFrame([[0.0, 1.0]], index=[begin], columns=table.columns.values)
-    table = pandas.concat([base_date, table])
-
-
     return PeriodPerformance(begin, end_date, table)
 
 class PeriodPerformance(object):

@@ -6,6 +6,7 @@
 from furnace import performance
 from furnace import weathermen
 from furnace import portfolio
+from dateutil.rrule import rrule, YEARLY
 import abc
 
 class TradingPeriod(object):
@@ -38,13 +39,13 @@ class Strategy(object):
         #NOTE: we might get rid of the whole notion of an 'ending' portfolio, and always assume that a beginning
         #portfolio and ending portfolio have the same *initial target* but differ in dividends reinvested
         assert self._asset_universe.supports_date(begin_date)
-        assert self._asset_universe.supports_date(end_date)
+        assert self._asset_universe.supports_date(end_date), "calendar does not support date {0}".format(end_date)
 
         period_performances = []
         for trading_period in self.periods_during(begin_date, end_date):
             period_begin = trading_period.begin()
             index = self.target_weighting_on(period_begin).make_index_on(period_begin)
-            period_performances.append(performance.make_period_performance(begin_date, end_date, index))
+            period_performances.append(performance.make_period_performance(period_begin, trading_period.end(), index))
         return performance.OverallPerformance(period_performances)
 
     def periods_during(self, begin_date, end_date):
@@ -100,6 +101,28 @@ class BuyAndHold(RebalancingRule):
         """ Returns the length of the buy and hold period """
         return (self._end_date - self._begin_date).days
 
+class AnnualRebalance(RebalancingRule):
+    """ Annual rebalance rebalances every year on same day as begin_date """
+
+    def __init__(self, fcalendar):
+        """ Requires a calendar to find future trading dates """
+        self._fcalendar = fcalendar
+
+#TODO: add test that we start our rebalance on correctly on the first day 
+    def periods_during(self, begin_date, end_date):
+        """ Returns all first trading dates of the year between begin and end date """
+
+        dates = list(rrule(YEARLY, dtstart=begin_date, until=end_date))
+        for period_begin, period_end in zip(dates[:-1], dates[1:]):
+            yield TradingPeriod(self._fcalendar.nth_trading_day_after(0, period_begin),
+                                self._fcalendar.nth_trading_day_after(0, period_end))
+
+        #TODO: probably use fcalendar on this as well as relearn a little bit of the rrule syntax
+
+    def period_length(self):
+        """ Returns a years length """
+        return 365
+
 #family strategies
 def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
     """ Purchases a single asset at the beginning of the period and holds it to the end.
@@ -128,6 +151,30 @@ def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weig
     return Strategy(portfolio.StaticTarget(weightings),
                     asset_universe.restricted_to(symbols),
                     BuyAndHold(begin_date, end_date),
+                    weathermen.NullForecaster())
+
+def yearly_rebalance_single_asset(asset_universe, fcalendar, symbol):
+    """ A single asset that is rebalanced. This is a no-op strategy used for testing """
+
+    assert asset_universe.supports_symbol(symbol)
+
+    asset_universe = asset_universe.restricted_to([symbol])
+
+    return Strategy(portfolio.SingleAsset(),
+                    asset_universe,
+                    AnnualRebalance(fcalendar),
+                    weathermen.NullForecaster())
+
+def yearly_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights):
+    """ An annually rebalanced multi asset portfolio with static targets. """
+
+    assert all(asset_universe.supports_symbol(symbol) for symbol in symbols)
+    weightings = portfolio.Weightings([portfolio.Weighting(asset_universe.make_asset(symbol), weight)
+                                       for symbol, weight in zip(symbols, weights)])
+
+    return Strategy(portfolio.StaticTarget(weightings),
+                    asset_universe.restricted_to(symbols),
+                    AnnualRebalance(fcalendar),
                     weathermen.NullForecaster())
 
 #particular strategies
