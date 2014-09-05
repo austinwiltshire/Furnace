@@ -4,52 +4,38 @@ A financial calendaring module using dateutil
 
 import datetime
 from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
+import bisect
 
 class FCalendar(object):
     """ A financial calendar """
-    def __init__(self, daterule):
-        self._daterule = daterule
+    def __init__(self, dates):
+        self._dates = dates
 
     def __iter__(self):
-        return iter(self._daterule)
+        return iter(self._dates)
 
     def nth_trading_day_after(self, nth, a_date):
         """ Finds the nth trading day after aDate.  Takes into account holidays and weekends. """
 
-        if a_date in self._daterule: #start so i'm always on a trading day.
-            trial_date = a_date
-        else:
-            trial_date = self._daterule.after(a_date)
 
-        if nth == 0: #in case we actually just want the trading day we passed in
-            return trial_date
-
-        for _ in range(nth):
-            trial_date = self._daterule.after(trial_date)
-        return trial_date
+        return self._dates[bisect.bisect_left(self._dates, a_date) + nth]
 
     def nth_trading_day_before(self, nth, a_date):
         """ Finds the nth trading day before aDate.  Takes into account holidays and weekends. """
-        trial_date = a_date
 
-        if nth == 0: #in case we actually just want the trading day we passed in
-            if a_date in self._daterule:
-                return a_date
-            else:
-                return self._daterule.before(a_date)
-
-        for _ in range(nth):
-            trial_date = self._daterule.before(trial_date)
-        return trial_date
+        return self._dates[bisect.bisect_right(self._dates, a_date) - (nth + 1)]
 
 def make_fcalendar(begin_date):
     """ Factory function for financial calendars """
     return FCalendar(build_trading_date_rule(begin_date))
 
 #Move all dicts out to global scope such that they are only built once.
-def build_trading_date_rule(begin_date):
+def build_trading_date_rule(begin_date, end_date=None):
     """ Helper function to build any local daily rule for iterator use.  Takes into account holidays and weekends.  Set
         begin_date to the first date available, the further back you go, the more strenuous performance. """
+
+    if not end_date:
+        end_date = datetime.datetime.today()
 
     days_of_mourning = {"Eisenhower":datetime.datetime(1969, 3, 31),
             "MartinLutherKing":datetime.datetime(1968, 4, 9),
@@ -105,22 +91,29 @@ def build_trading_date_rule(begin_date):
             "OldMemorialDaySat":rrule(YEARLY, bymonthday=29, bymonth=5, byweekday=(FR), dtstart=begin_date,
                                       until=datetime.datetime(1970, 1, 1)), #there was no memorial day in 1970
             "NewYearsDayWeek":rrule(YEARLY, bymonthday=1, bymonth=1, byweekday=(MO, TU, WE, TH, FR),
-                                    dtstart=begin_date),
+                                    dtstart=begin_date, until=end_date),
             "NewYearsDaySun":rrule(YEARLY, bymonthday=2, bymonth=1, byweekday=(MO), dtstart=begin_date),
             "IndependenceDayWeek":rrule(YEARLY, bymonth=7, bymonthday=(4), byweekday=(MO, TU, WE, TH, FR),
-                                        dtstart=begin_date),
-            "IndependenceDaySun":rrule(YEARLY, bymonth=7, bymonthday=5, byweekday=(MO), dtstart=begin_date),
-            "IndependenceDaySat":rrule(YEARLY, bymonth=7, bymonthday=3, byweekday=(FR), dtstart=begin_date),
+                                        dtstart=begin_date, until=end_date),
+            "IndependenceDaySun":rrule(YEARLY, bymonth=7, bymonthday=5, byweekday=(MO), dtstart=begin_date,
+                                       until=end_date),
+            "IndependenceDaySat":rrule(YEARLY, bymonth=7, bymonthday=3, byweekday=(FR), dtstart=begin_date,
+                                       until=end_date),
             "ChristmasWeek":rrule(YEARLY, bymonth=12, bymonthday=25, byweekday=(MO, TU, WE, TH, FR),
-                                  dtstart=begin_date),
-            "ChristmasSun":rrule(YEARLY, bymonth=12, bymonthday=26, byweekday=(MO), dtstart=begin_date),
-            "ChristmasSat":rrule(YEARLY, bymonth=12, bymonthday=24, byweekday=(FR), dtstart=begin_date),
-            "GoodFriday":rrule(YEARLY, byeaster=-2, dtstart=begin_date),
-            "MartinLutherKingDay":rrule(YEARLY, bymonth=1, byweekday=MO(+3), dtstart=datetime.datetime(1998, 1, 1)),
-            "PresidentsDay":rrule(YEARLY, bymonth=2, byweekday=MO(+3), dtstart=datetime.datetime(1971, 1, 1)),
-            "LaborDay":rrule(YEARLY, bymonth=9, byweekday=MO(+1), dtstart=begin_date),
-            "NewMemorialDay":rrule(YEARLY, bymonth=5, byweekday=MO(-1), dtstart=datetime.datetime(1971, 1, 1)),
-            "ThanksgivingDay":rrule(YEARLY, bymonth=11, byweekday=TH(4), dtstart=begin_date)}
+                                  dtstart=begin_date, until=end_date),
+            "ChristmasSun":rrule(YEARLY, bymonth=12, bymonthday=26, byweekday=(MO), dtstart=begin_date,
+                                 until=end_date),
+            "ChristmasSat":rrule(YEARLY, bymonth=12, bymonthday=24, byweekday=(FR), dtstart=begin_date,
+                                 until=end_date),
+            "GoodFriday":rrule(YEARLY, byeaster=-2, dtstart=begin_date, until=end_date),
+            "MartinLutherKingDay":rrule(YEARLY, bymonth=1, byweekday=MO(+3), dtstart=datetime.datetime(1998, 1, 1),
+                                        until=end_date),
+            "PresidentsDay":rrule(YEARLY, bymonth=2, byweekday=MO(+3), dtstart=datetime.datetime(1971, 1, 1),
+                                        until=end_date),
+            "LaborDay":rrule(YEARLY, bymonth=9, byweekday=MO(+1), dtstart=begin_date, until=end_date),
+            "NewMemorialDay":rrule(YEARLY, bymonth=5, byweekday=MO(-1), dtstart=datetime.datetime(1971, 1, 1),
+                                   until=end_date),
+            "ThanksgivingDay":rrule(YEARLY, bymonth=11, byweekday=TH(4), dtstart=begin_date, until=end_date)}
 
     paper_crisis_rule = rrule(WEEKLY, bymonth=(6, 7, 8, 9, 10, 11, 12), byweekday=(WE),
                             dtstart=datetime.datetime(1968, 6, 6), until=datetime.datetime(1969, 1, 1))
@@ -135,10 +128,11 @@ def build_trading_date_rule(begin_date):
     holidays["PaperCrisis"] = paper_crisis_set
 
     trading_dates = rruleset(cache=True)
-    trading_dates.rrule(rrule(DAILY, byweekday=(MO, TU, WE, TH, FR), dtstart=begin_date))
+    trading_dates.rrule(rrule(DAILY, byweekday=(MO, TU, WE, TH, FR), dtstart=begin_date, until=end_date))
     for holiday in holidays.values():
         trading_dates.exrule(holiday)
     for exception_date in exception_dates.values():
         trading_dates.exdate(exception_date)
 
-    return trading_dates
+
+    return list(trading_dates)

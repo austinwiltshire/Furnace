@@ -38,6 +38,8 @@ class Strategy(object):
         #NOTE: seems like this should live in Performance.py
         #NOTE: we might get rid of the whole notion of an 'ending' portfolio, and always assume that a beginning
         #portfolio and ending portfolio have the same *initial target* but differ in dividends reinvested
+
+        #NOTE: turning off for now for great performance
         assert self._asset_universe.supports_date(begin_date)
         assert self._asset_universe.supports_date(end_date), "calendar does not support date {0}".format(end_date)
 
@@ -46,6 +48,7 @@ class Strategy(object):
             period_begin = trading_period.begin()
             index = self.target_weighting_on(period_begin).make_index_on(period_begin)
             period_performances.append(performance.make_period_performance(period_begin, trading_period.end(), index))
+
         return performance.OverallPerformance(period_performances)
 
     def periods_during(self, begin_date, end_date):
@@ -117,11 +120,34 @@ class AnnualRebalance(RebalancingRule):
             yield TradingPeriod(self._fcalendar.nth_trading_day_after(0, period_begin),
                                 self._fcalendar.nth_trading_day_after(0, period_end))
 
-        #TODO: probably use fcalendar on this as well as relearn a little bit of the rrule syntax
-
     def period_length(self):
         """ Returns a years length """
         return 365
+
+class NDayRebalance(RebalancingRule):
+    """ Rebalances every n days from begin date """
+
+    def __init__(self, fcalendar, ndays):
+        """ Requires a calendar to find future trading dates """
+        self._fcalendar = fcalendar
+        self._ndays = ndays
+
+#TODO: should test that we end properly on the end date when it's viable
+#TODO: should test that there are the right number of trading days and they are the right size for a known
+#period
+#TODO: test that we fall across weekends and holidays correctly
+    def periods_during(self, begin_date, end_date):
+        """ Iterates through every n days starting at begin date """
+
+        dates = [date for date in self._fcalendar]
+        current = dates.index(self._fcalendar.nth_trading_day_after(0, begin_date))
+        end = dates.index(self._fcalendar.nth_trading_day_before(0, end_date))
+        periods = zip(dates[current:end-self._ndays:self._ndays], dates[current + self._ndays:end:self._ndays])
+        return (TradingPeriod(date1, date2) for date1, date2 in periods)
+
+    def period_length(self):
+        """ Returns a years length """
+        return self._ndays
 
 #family strategies
 def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
@@ -175,6 +201,30 @@ def yearly_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights):
     return Strategy(portfolio.StaticTarget(weightings),
                     asset_universe.restricted_to(symbols),
                     AnnualRebalance(fcalendar),
+                    weathermen.NullForecaster())
+
+def ndays_rebalance_single_asset(asset_universe, fcalendar, symbol, days):
+    """ A single asset that is rebalanced. This is a no-op strategy used for testing """
+
+    assert asset_universe.supports_symbol(symbol)
+
+    asset_universe = asset_universe.restricted_to([symbol])
+
+    return Strategy(portfolio.SingleAsset(),
+                    asset_universe,
+                    NDayRebalance(fcalendar, days),
+                    weathermen.NullForecaster())
+
+def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, days):
+
+    assert all([asset_universe.supports_symbol(symbol) for symbol in symbols])
+
+    weightings = portfolio.Weightings([portfolio.Weighting(asset_universe.make_asset(symbol), weight)
+                                       for symbol, weight in zip(symbols, weights)])
+
+    return Strategy(portfolio.StaticTarget(weightings),
+                    asset_universe,
+                    NDayRebalance(fcalendar, days),
                     weathermen.NullForecaster())
 
 #particular strategies

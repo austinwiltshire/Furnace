@@ -86,16 +86,14 @@ def make_index(weightings, date):
     #computes the decomposed total return of a weighted asset
     def make_partial_index(weighting):
         """ Helper method adds necessary columns to a table """
-        table = weighting.asset().table()[['Close', 'Dividends']]
+        table = weighting.asset().table()
         table = table[table.index >= date]
 
-        accumulated_yields = ((table['Dividends'] / table['Close']) + 1.0).dropna().cumprod()
-        initial_basis = weighting.weight() / table.ix[date]['Close']
+        #get the initial weight based on close, then readjust downward to unbias for any initial basis adjustment
+        #due to preexisting dividends
+        initial_basis = (weighting.weight() / table.ix[date]['Close']) / table.ix[date]['Basis Adjustment']
 
-        #NOTE: we assume dividends are reinvested on the day of
-        adjusted_basis = accumulated_yields.reindex(table.index, method='ffill', fill_value=1.0) * initial_basis
-
-        series = table['Close'] * adjusted_basis
+        series = table['Adjusted Close'] * initial_basis
         series.name = weighting.asset().symbol() + "_partial_adjusted_value"
 
         return series

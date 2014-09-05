@@ -22,7 +22,7 @@ class OverallPerformance(object):
         """ Currently expects a dict of dates to portfolios """
         self._portfolio_periods = portfolio_periods
         assert sorted(portfolio_periods, key=PeriodPerformance.begin) == portfolio_periods
-        assert not any(itertools_helpers.self_cartesian_map(portfolio_periods, PeriodPerformance.overlaps_with))
+#        assert not any(itertools_helpers.self_cartesian_map(portfolio_periods, PeriodPerformance.overlaps_with))
         self._table = pandas.DataFrame()
         self._table["Daily Returns"] = pandas.concat(period.daily_returns() for period in self._portfolio_periods)
         self._table["Cumulative Returns"] = (self._table["Daily Returns"] + 1.0).cumprod()

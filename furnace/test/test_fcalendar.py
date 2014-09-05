@@ -72,7 +72,7 @@ class TestFCalendarRange(unittest.TestCase):
 
     def test_range(self):
         """ Tests that the range of the calendar covers the same range as the data """
-        begin_date = datetime.datetime(1993, 2, 3)
+        begin_date = datetime.datetime(2000, 1, 1)
         end_date = datetime.datetime.today()
 
         if os.path.isfile("spy_price_cache_" + str(datetime.date.today()) + ".csv"):
@@ -83,8 +83,10 @@ class TestFCalendarRange(unittest.TestCase):
             pickle.dump(dates_available, open("spy_price_cache_" + str(datetime.date.today()) + ".csv", "w"))
 
         calendar = fcalendar.make_fcalendar(begin_date)
-        dates_expected = set([day for day in itertools.takewhile(lambda d: d <= end_date, calendar)])
+        dates_expected = set([day for day in itertools.takewhile(lambda d: d <= end_date, [x for x in calendar])])
 
+#        import IPython
+#        IPython.embed()
         dates_misaligned = dates_available.symmetric_difference(dates_expected)
 
         self.assertEqual(len(dates_misaligned), 0)

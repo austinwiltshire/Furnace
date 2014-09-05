@@ -246,3 +246,37 @@ def test_multi_asset_yearly_hand():
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
     assert is_close(performance_.growth_by(end), 1.573)
+
+#TODO: comment that ndays is n TRADING DAYS. use yearly if you want calendar years, or introduce other
+#rules if you want to use those
+def test_daily_yearly_eq():
+    """ Tests that a 365 day rebalancing rule is equivalent to a yearly rebalancing rule """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+
+    daily = strategy.ndays_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2], 252)
+    yearly = strategy.yearly_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2])
+
+    daily_performance = performance.fire_furnace(daily, begin, end)
+    yearly_performance = performance.fire_furnace(yearly, begin, end)
+
+    assert is_close(daily_performance.cagr(), yearly_performance.cagr())
+
+def test_single_yearly_daily():
+    """ TDD for n-days rebalance rule. 10 day rebalance rule should be the same as buy and hold single asset
+    We chose 10 days because 1 day rebalancing takes about 10 seconds to run. """
+
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY"])
+    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
+    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+
+    rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
+    buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
+    test_date = datetime(2011, 12, 30)
+
+    assert is_close(rebalanced_perf.growth_by(test_date), buy_and_hold_perf.growth_by(test_date))

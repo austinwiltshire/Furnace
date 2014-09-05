@@ -10,6 +10,9 @@ class AssetUniverse(object):
         self._calendar = calendar
         self._supported_symbols = set(supported_symbols)
 
+        #NOTE: cached for great performance
+        self._assets = dict((name, self.make_asset(name)) for name in self._supported_symbols)
+
     def make_asset(self, symbol):
         """ Creates an asset based on the ticker symbol """
         assert symbol in self._supported_symbols
@@ -24,8 +27,7 @@ class AssetUniverse(object):
         return symbol in self._supported_symbols
 
     def __iter__(self):
-        for symbol in self._supported_symbols:
-            yield self.make_asset(symbol)
+        return self._assets.itervalues()
 
     def restricted_to(self, supported_symbols):
         """ Subsets this asset universe on the passed in symbols """
@@ -44,6 +46,14 @@ class Asset(object):
         self._symbol = symbol
         self._data_cache = data_cache
         self._calendar = calendar
+        self._data_cache["Yield"] = self._data_cache['Dividends'] / self._data_cache['Close']
+        accumulated_yield = (self._data_cache["Yield"] + 1.0).dropna().cumprod()
+
+        #note: we assume dividends are reinvested on the day of
+        self._data_cache["Basis Adjustment"] = accumulated_yield.reindex(self._data_cache.index,
+                                                                         method='ffill',
+                                                                         fill_value=1.0)
+        self._data_cache["Adjusted Close"] = self._data_cache["Close"] * self._data_cache["Basis Adjustment"]
 
     def table(self):
         """ Accessor for the table this object is based on """
