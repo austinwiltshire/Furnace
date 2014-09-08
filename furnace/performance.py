@@ -74,8 +74,9 @@ class OverallPerformance(object):
     def reward_risk_ratio(self):
         """ Returns a simplified sharpe ratio - cagr over volatility. """
         #TODO: can calculate true sharpe if I had access to treasury bond returns as the risk free rate 
+        #TODO: figure out whether you want to pass returns as 106% or just 6%. leaning towrads just 6%
 
-        return self.cagr() / self.volatility()
+        return (self.cagr() - 1.0) / self.volatility()
 
     def number_of_trades(self):
         """ Simple turnover metric - an estimate of the number of trades we make """
