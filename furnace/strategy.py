@@ -49,7 +49,7 @@ class Strategy(object):
             index = self.target_weighting_on(period_begin).make_index_on(period_begin)
             period_performances.append(performance.make_period_performance(period_begin, trading_period.end(), index))
 
-        return performance.OverallPerformance(period_performances)
+        return performance.OverallPerformance(period_performances, self._asset_universe)
 
     def periods_during(self, begin_date, end_date):
         """ The periods this strategy operates on - i.e., weekly, monthly, daily """

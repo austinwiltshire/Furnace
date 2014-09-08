@@ -280,3 +280,38 @@ def test_single_yearly_daily():
     test_date = datetime(2011, 12, 30)
 
     assert is_close(rebalanced_perf.growth_by(test_date), buy_and_hold_perf.growth_by(test_date))
+
+def test_reward_risk():
+    """ Regression test of reward-risk ratio """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY"])
+    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
+
+    rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
+
+    assert is_close(rebalanced_perf.reward_risk_ratio(), 5.158)
+
+def test_number_of_trades_buyhold():
+    """ Buy and hold of one single asset should have one single trade date """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY"])
+    buy_and_hold = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SPY")
+
+    buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
+
+    assert buy_and_hold_perf.number_of_trades() == 1
+
+def test_number_of_trades_ndaily():
+    """ Regression test of a more aggressive rebalancing rule regarding number of trades """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY"])
+    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
+
+    rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
+
+    assert rebalanced_perf.number_of_trades() == 251

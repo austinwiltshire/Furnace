@@ -18,7 +18,7 @@ def fire_furnace(strategy, begin_date, end_date):
 class OverallPerformance(object):
     """ OverallPerformance is how a strategy does over time. """
 
-    def __init__(self, portfolio_periods):
+    def __init__(self, portfolio_periods, asset_universe):
         """ Currently expects a dict of dates to portfolios """
         self._portfolio_periods = portfolio_periods
         assert sorted(portfolio_periods, key=PeriodPerformance.begin) == portfolio_periods
@@ -26,6 +26,7 @@ class OverallPerformance(object):
         self._table = pandas.DataFrame()
         self._table["Daily Returns"] = pandas.concat(period.daily_returns() for period in self._portfolio_periods)
         self._table["Cumulative Returns"] = (self._table["Daily Returns"] + 1.0).cumprod()
+        self._asset_universe = asset_universe
         #import IPython
         #IPython.embed()
 
@@ -69,6 +70,16 @@ class OverallPerformance(object):
     def end(self):
         """ Returns ending date of this performance period """
         return sorted(self._portfolio_periods, cmp=lambda x, y: x.begin() < y.begin())[-1].end()
+
+    def reward_risk_ratio(self):
+        """ Returns a simplified sharpe ratio - cagr over volatility. """
+        #TODO: can calculate true sharpe if I had access to treasury bond returns as the risk free rate 
+
+        return self.cagr() / self.volatility()
+
+    def number_of_trades(self):
+        """ Simple turnover metric - an estimate of the number of trades we make """
+        return len(self._portfolio_periods) * self._asset_universe.cardinality()
 
 def make_period_performance(begin_date, end_date, index):
     """ Factory for a period performance object """
