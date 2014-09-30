@@ -1,0 +1,6 @@
+[run]
+omit = 
+    furnace/studies/*
+    furnace/main.py
+    furnace/test/*
+
