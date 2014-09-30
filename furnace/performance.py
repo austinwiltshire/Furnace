@@ -43,10 +43,7 @@ class OverallPerformance(object):
         """ Returns the length of this performance period in trading days"""
         #NOTE: looked at using dateutil.relativedelta here, but we actually want absolute number of days between
         #any two begin and end dates.
-#        import IPython
-#        IPython.embed()
         return datetime.timedelta(len(self._table.index))
-#        return self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()
 
     #TODO: add assertion that number of trading days in our data set is same as trading days in financial calendar
     #TODO: financial calendar ought to return a pandas series, would make the above easier
@@ -82,7 +79,7 @@ class OverallPerformance(object):
         """ Returns ending date of this performance period """
         return sorted(self._portfolio_periods, cmp=lambda x, y: x.begin() < y.begin())[-1].end()
 
-    def reward_risk_ratio(self):
+    def simple_sharpe(self):
         """ Returns a simplified sharpe ratio - cagr over volatility. """
         #TODO: can calculate true sharpe if I had access to treasury bond returns as the risk free rate 
         #TODO: figure out whether you want to pass returns as 106% or just 6%. leaning towrads just 6%

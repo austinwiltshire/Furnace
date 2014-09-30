@@ -73,7 +73,7 @@ def function_builder(begin, end):
         assert end_date <= datetime.datetime(2012, 12, 31)
 
         performance_ = furnace.performance.fire_furnace(strategy_, begin_date, end_date)
-        return (days_out, stock_percent, rebalancing_period, performance_.reward_risk_ratio(), performance_.cagr(),
+        return (days_out, stock_percent, rebalancing_period, performance_.simple_sharpe(), performance_.cagr(),
                 performance_.number_of_trades())
 
     return func
