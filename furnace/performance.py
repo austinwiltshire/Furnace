@@ -8,6 +8,11 @@
 import numpy
 from furnace.filter import itertools_helpers
 import pandas
+import datetime
+
+def trading_days_in_year():
+    """ Constant number of trading days in a year. We use a somewhat standard 252 """
+    return 252.0
 
 #NOTE: this used to be a single method on an object. Would make sense to refactor to that if we need to add more state
 #to our simulation
@@ -35,21 +40,27 @@ class OverallPerformance(object):
         return self.growth_by(self.end())
 
     def duration(self):
-        """ Returns the length of this performance period """
+        """ Returns the length of this performance period in trading days"""
         #NOTE: looked at using dateutil.relativedelta here, but we actually want absolute number of days between
         #any two begin and end dates.
-        return self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()
+#        import IPython
+#        IPython.embed()
+        return datetime.timedelta(len(self._table.index))
+#        return self._portfolio_periods[-1].end() - self._portfolio_periods[0].begin()
+
+    #TODO: add assertion that number of trading days in our data set is same as trading days in financial calendar
+    #TODO: financial calendar ought to return a pandas series, would make the above easier
 
     def cagr(self):
         """ Returns the compound annual growth rate """
-        return pow(self.total_return(), 1.0 / (self.duration().days / 365.0))
+        return pow(self.total_return(), 1.0 / (self.duration().days / trading_days_in_year()))
 
     def volatility(self):
         """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility
         #daily volatility is the sqrt of period variance. this is annualized by multiplying it by number of trading
         #days in a year, commonly assumed by economists to be 252
-        return numpy.sqrt(252*self._table["Daily Returns"].var())
+        return numpy.sqrt(trading_days_in_year()*self._table["Daily Returns"].var())
 
     def growth_by(self, date):
         """ Returns growth by a date as a percent scaled against 100% on beginning date of this performance """

@@ -291,7 +291,7 @@ def test_reward_risk():
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
 
-    assert is_close(rebalanced_perf.reward_risk_ratio(), .3287)
+    assert is_close(rebalanced_perf.reward_risk_ratio(), .329)
 
 def test_number_of_trades_buyhold():
     """ Buy and hold of one single asset should have one single trade date """
