@@ -6,7 +6,6 @@
 # - max drawdown
 
 import numpy
-from furnace.filter import itertools_helpers
 import pandas
 import datetime
 
@@ -45,9 +44,6 @@ class OverallPerformance(object):
         #any two begin and end dates.
         return datetime.timedelta(len(self._table.index))
 
-    #TODO: add assertion that number of trading days in our data set is same as trading days in financial calendar
-    #TODO: financial calendar ought to return a pandas series, would make the above easier
-
     def cagr(self):
         """ Returns the compound annual growth rate """
         return pow(self.total_return(), 1.0 / (self.duration().days / trading_days_in_year()))
@@ -81,9 +77,6 @@ class OverallPerformance(object):
 
     def simple_sharpe(self):
         """ Returns a simplified sharpe ratio - cagr over volatility. """
-        #TODO: can calculate true sharpe if I had access to treasury bond returns as the risk free rate 
-        #TODO: figure out whether you want to pass returns as 106% or just 6%. leaning towrads just 6%
-
         return (self.cagr() - 1.0) / self.volatility()
 
     def number_of_trades(self):

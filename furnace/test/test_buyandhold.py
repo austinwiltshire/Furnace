@@ -247,8 +247,6 @@ def test_multi_asset_yearly_hand():
 
     assert is_close(performance_.growth_by(end), 1.573)
 
-#TODO: comment that ndays is n TRADING DAYS. use yearly if you want calendar years, or introduce other
-#rules if you want to use those
 def test_daily_yearly_eq():
     """ Tests that a 365 day rebalancing rule is equivalent to a yearly rebalancing rule """
     begin = datetime(2003, 1, 2)

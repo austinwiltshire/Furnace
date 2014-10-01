@@ -111,7 +111,6 @@ class AnnualRebalance(RebalancingRule):
         """ Requires a calendar to find future trading dates """
         self._fcalendar = fcalendar
 
-#TODO: add test that we start our rebalance on correctly on the first day 
     def periods_during(self, begin_date, end_date):
         """ Returns all first trading dates of the year between begin and end date """
 
@@ -121,21 +120,18 @@ class AnnualRebalance(RebalancingRule):
                                 self._fcalendar.nth_trading_day_after(0, period_end))
 
     def period_length(self):
-        """ Returns a years length """
+        """ Returns a years length in real days. Period length would generally find the closest trading day to one year
+        out """
         return 365
 
 class NDayRebalance(RebalancingRule):
-    """ Rebalances every n days from begin date """
+    """ Rebalances every n days TRADING from begin date """
 
     def __init__(self, fcalendar, ndays):
         """ Requires a calendar to find future trading dates """
         self._fcalendar = fcalendar
         self._ndays = ndays
 
-#TODO: should test that we end properly on the end date when it's viable
-#TODO: should test that there are the right number of trading days and they are the right size for a known
-#period
-#TODO: test that we fall across weekends and holidays correctly
     def periods_during(self, begin_date, end_date):
         """ Iterates through every n days starting at begin date """
 
@@ -146,7 +142,7 @@ class NDayRebalance(RebalancingRule):
         return (TradingPeriod(date1, date2) for date1, date2 in periods)
 
     def period_length(self):
-        """ Returns a years length """
+        """ Returns the trading days """
         return self._ndays
 
 #family strategies
@@ -216,6 +212,7 @@ def ndays_rebalance_single_asset(asset_universe, fcalendar, symbol, days):
                     weathermen.NullForecaster())
 
 def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, days):
+    """ A multi asset portfolio that is rebalanced every n days """
 
     assert all([asset_universe.supports_symbol(symbol) for symbol in symbols])
 
