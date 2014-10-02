@@ -22,21 +22,26 @@ def load_pandas():
 
 def webload_symbol_price(symbol, begin_date, end_date):
     """ Loads a symbol's price straight from the web """
-    query_params = {"symbol":symbol,
-                    "end_day":end_date.day,
-                    "end_month":end_date.month - 1,
-                    "end_year":end_date.year,
-                    "begin_day":begin_date.day,
-                    "begin_month":begin_date.month - 1,
-                    "begin_year":begin_date.year}
-    query_string = ("http://ichart.finance.yahoo.com/table.csv?"
-                    "s=%(symbol)s&"
-                    "d=%(end_month)d&"
-                    "e=%(end_day)d&"
-                    "f=%(end_year)d&"
-                    "g=d&"
-                    "a=%(begin_month)d&"
-                    "b=%(begin_day)d&"
-                    "c=%(begin_year)d"
-                    "&ignore=.csv") % query_params
+
+    query_params = {
+        "symbol":symbol,
+        "end_day":end_date.day,
+        "end_month":end_date.month - 1,
+        "end_year":end_date.year,
+        "begin_day":begin_date.day,
+        "begin_month":begin_date.month - 1,
+        "begin_year":begin_date.year
+    }
+    query_string = (
+        "http://ichart.finance.yahoo.com/table.csv?"
+        "s=%(symbol)s&"
+        "d=%(end_month)d&"
+        "e=%(end_day)d&"
+        "f=%(end_year)d&"
+        "g=d&"
+        "a=%(begin_month)d&"
+        "b=%(begin_day)d&"
+        "c=%(begin_year)d"
+        "&ignore=.csv"
+    ) % query_params
     return pandas.read_csv(urllib2.urlopen(query_string), index_col="Date", parse_dates=True)
