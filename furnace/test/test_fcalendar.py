@@ -54,7 +54,7 @@ class TestFcalendarHelpers(unittest.TestCase):
         self.assertTrue(calendar.nth_trading_day_after(0, date(2005, 6, 18)) == date(2005, 6, 20))
 
     def test_before(self):
-        """ Test the after logic """
+        """ Test the before logic """
 
         date = datetime.datetime
         calendar = fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))

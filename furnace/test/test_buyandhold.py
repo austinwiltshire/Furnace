@@ -1,17 +1,18 @@
-""" Tests strategies and tests known metrics.
+"""
+Tests strategies and tests known metrics.
 
-    REGRESSION style tests simply test that known outputs from the models
-    Other tests have been hand checked generally using yahoo data. Yahoo data drifts, so usually download at one time
-    and reuse that data over and over again.
+REGRESSION style tests simply test that known outputs from the models
+Other tests have been hand checked generally using yahoo data. Yahoo data drifts, so usually download at one time
+and reuse that data over and over again.
 
-    All written in py.test style.
-    to run,
+All written in py.test style.
+to run,
 
-    pip install pytest
+pip install pytest
 
-    in Furnace directory,
-    >py.test
-    """
+in Furnace directory,
+>py.test
+"""
 
 from datetime import datetime
 from furnace.data import asset, yahoo, fcalendar
@@ -279,8 +280,8 @@ def test_single_yearly_daily():
 
     assert is_close(rebalanced_perf.growth_by(test_date), buy_and_hold_perf.growth_by(test_date))
 
-def test_reward_risk():
-    """ Regression test of reward-risk ratio """
+def test_simple_sharpe():
+    """ Regression test of simplified sharpe ratio """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))

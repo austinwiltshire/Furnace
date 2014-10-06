@@ -1,13 +1,9 @@
 """ Performance tracking """
 
-# - equity curve (DONE)
-# - cagr (DONE)
-# - volatility (DONE)
-# - max drawdown
-
 import numpy
 import pandas
 import datetime
+import itertools
 
 def trading_days_in_year():
     """ Constant number of trading days in a year. We use a somewhat standard 252 """
@@ -24,15 +20,20 @@ class OverallPerformance(object):
 
     def __init__(self, portfolio_periods, asset_universe):
         """ Currently expects a dict of dates to portfolios """
-        self._portfolio_periods = portfolio_periods
         assert sorted(portfolio_periods, key=PeriodPerformance.begin) == portfolio_periods
-#        assert not any(itertools_helpers.self_cartesian_map(portfolio_periods, PeriodPerformance.overlaps_with))
-        self._table = pandas.DataFrame()
-        self._table["Daily Returns"] = pandas.concat(period.daily_returns() for period in self._portfolio_periods)
-        self._table["Cumulative Returns"] = (self._table["Daily Returns"] + 1.0).cumprod()
+        assert not any(
+            period1.overlaps_with(period2)
+            for period1, period2 in itertools.product(portfolio_periods, portfolio_periods)
+            if period1 is not period2
+        )
+
+        self._portfolio_periods = portfolio_periods
         self._asset_universe = asset_universe
-        #import IPython
-        #IPython.embed()
+
+        table = pandas.DataFrame()
+        table["Daily Returns"] = pandas.concat(period.daily_returns() for period in self._portfolio_periods)
+        table["Cumulative Returns"] = (table["Daily Returns"] + 1.0).cumprod()
+        self._table = table
 
     def total_return(self):
         """ Returns the total return from begining to end """
@@ -40,8 +41,6 @@ class OverallPerformance(object):
 
     def duration(self):
         """ Returns the length of this performance period in trading days"""
-        #NOTE: looked at using dateutil.relativedelta here, but we actually want absolute number of days between
-        #any two begin and end dates.
         return datetime.timedelta(len(self._table.index))
 
     def cagr(self):
@@ -52,7 +51,7 @@ class OverallPerformance(object):
         """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility
         #daily volatility is the sqrt of period variance. this is annualized by multiplying it by number of trading
-        #days in a year, commonly assumed by economists to be 252
+        #days in a year
         return numpy.sqrt(trading_days_in_year()*self._table["Daily Returns"].var())
 
     def growth_by(self, date):

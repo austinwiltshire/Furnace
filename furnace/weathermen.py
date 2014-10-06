@@ -34,6 +34,7 @@ class Forecast(object):
 
 #NOTE: invariably will add forecasts for volatility at least
 #pylint: disable=R0903
+#TODO: this should be a class held by nullforecaster as an inner class
 class NullForecast(Forecast):
     """ Simply returns some default value for all symbols """
 

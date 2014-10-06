@@ -35,11 +35,6 @@ class Strategy(object):
 
     def performance_during(self, begin_date, end_date):
         """ Gets the overall performance from begin_date to end_date """
-        #NOTE: seems like this should live in Performance.py
-        #NOTE: we might get rid of the whole notion of an 'ending' portfolio, and always assume that a beginning
-        #portfolio and ending portfolio have the same *initial target* but differ in dividends reinvested
-
-        #NOTE: turning off for now for great performance
         assert self._asset_universe.supports_date(begin_date)
         assert self._asset_universe.supports_date(end_date), "calendar does not support date {0}".format(end_date)
 
@@ -65,6 +60,10 @@ class Strategy(object):
         """ Generates a target portfolio this strategy would recommend for date """
 
         forecast = self.forecast(date)
+        
+        #TODO: should forecast be similar to asset universe, except it also provides expectations on those assets?
+        #if so, then we don't have to pass in asset universe here, forecast can provide functions like cardinality
+        #and construction
         return self._portfolio_optimizer.optimize(forecast, self._asset_universe)
 
 #NOTE: assuming there will be more rebalancing rules eventually and this interface will grow
@@ -73,6 +72,7 @@ class RebalancingRule(object):
     """ Represents different strategies for when to rebalance a portfolio """
     __metaclass__ = abc.ABCMeta
 
+#TODO: add tests that the rebalancing rule handles begin and end dates properly
     @abc.abstractmethod
     def periods_during(self, begin_date, end_date):
         """ Returns a set of periods, beginning at begin and ending at end (possibly truncated at beginning and end)
@@ -88,7 +88,9 @@ class RebalancingRule(object):
 class BuyAndHold(RebalancingRule):
     """ Buy and hold never trades - it starts with its beginning portfolio and holds it until the end """
 
+#TODO: add test for begin and end being same date
     def __init__(self, begin_date, end_date):
+        assert begin_date <= end_date
         self._begin_date = begin_date
         self._end_date = end_date
 
@@ -100,6 +102,7 @@ class BuyAndHold(RebalancingRule):
 
         yield TradingPeriod(begin_date, end_date)
 
+#FIXME: this is incorrect - this should be number of *trading* days.
     def period_length(self):
         """ Returns the length of the buy and hold period """
         return (self._end_date - self._begin_date).days
@@ -116,9 +119,11 @@ class AnnualRebalance(RebalancingRule):
 
         dates = list(rrule(YEARLY, dtstart=begin_date, until=end_date))
         for period_begin, period_end in zip(dates[:-1], dates[1:]):
+            #TODO: add 'first day after' convenience functions
             yield TradingPeriod(self._fcalendar.nth_trading_day_after(0, period_begin),
                                 self._fcalendar.nth_trading_day_after(0, period_end))
 
+#FIXME: this should be number of *trading* days
     def period_length(self):
         """ Returns a years length in real days. Period length would generally find the closest trading day to one year
         out """
@@ -145,6 +150,7 @@ class NDayRebalance(RebalancingRule):
         """ Returns the trading days """
         return self._ndays
 
+#TODO: look at eliminating most of these and decomposing common helpers out of them
 #family strategies
 def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
     """ Purchases a single asset at the beginning of the period and holds it to the end.
@@ -224,6 +230,7 @@ def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, day
                     NDayRebalance(fcalendar, days),
                     weathermen.NullForecaster())
 
+#TODO: see if these are called more than once
 #particular strategies
 def buy_and_hold_stocks(asset_universe, begin_date, end_date):
     """ Purchases the SPY at the beginning period and holds it to the end """
