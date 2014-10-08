@@ -12,6 +12,9 @@ def test_main():
 
 
     calendar = furnace.data.fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
+
+    #TODO: add factory function to asset factory that automatically loads the data cache.
+    #can make a singleton of it
     data_cache = furnace.data.yahoo.load_pandas()
     asset_factory = furnace.data.asset.AssetUniverse(["SPY", "LQD"], data_cache, calendar)
 
@@ -34,6 +37,8 @@ def test_main():
     stocks_perf.plot_index(100.0)
     print (stocks_and_bonds_perf.cagr() - 1.0) / stocks_and_bonds_perf.volatility()
     print (stocks_perf.cagr() - 1.0) / stocks_perf.volatility()
+
+    #TODO: add weak test for the pyplot
     matplotlib.pyplot.show()
 
 if "__main__" == __name__:

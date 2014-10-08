@@ -1,15 +1,15 @@
-""" 
-We're generating a data set to answer the question of what should we have held as a percent of our portfolio in stocks 
-and how many trading days should pass between rebalancing such that we maximize our simplied sharpe ratio for a 
-portfolio that only holds stocks (SPY) and corporate bonds (LQD) for a 9 year period between 2003, 1, 2 and 
-2012, 12, 31. 
+"""
+We're generating a data set to answer the question of what should we have held as a percent of our portfolio in stocks
+and how many trading days should pass between rebalancing such that we maximize our simplied sharpe ratio for a
+portfolio that only holds stocks (SPY) and corporate bonds (LQD) for a 9 year period between 2003, 1, 2 and
+2012, 12, 31.
 
 We do this by creating all possible portfolios with stock weightings betwen 0% and 100%, and trading days between
 rebalancings between 1 and 252 trading days (every 5th option, such that we try 1, 6, 11... 252 trading days between
 rebalancings). We also vary start dates from 2003, 1, 2 to 2004, 1, 2 but hold our portfolio length constant at 9 years.
 
 The intended purpose of this data set is to group by percent stocks and number of trading days between rebalancings,
-averaging the resultant simplied sharpe ratio metrics accross all possible start dates to eliminate any bias due to 
+averaging the resultant simplied sharpe ratio metrics accross all possible start dates to eliminate any bias due to
 lucky initial start times
 """
 
@@ -37,19 +37,24 @@ def main():
     begin = datetime.datetime(2003, 1, 2)
     end = datetime.datetime(2011, 12, 31)
     grid = list(itertools.product(stock_percents, rebalancing_periods, days_in))
-    builder_ = function_builder(begin, end)
-    results = client.map(builder_, grid)
+    builder = function_builder(begin, end)
+    results = client.map(builder, grid)
 
+#TODO: does pandas have a plain 'save to csv' function?
     with open('data.csv', 'wb') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['days_out', 'pct', 'ndays', 'r2r', 'cagr', 'ntrades'])
-        for result in results:
-            writer.writerow(result)
+        writer.writerows(results)
 
+#NOTE: went with a closure over an object as the object only has one method (this drew a warning in python).
+#Seriously, it does make sense to just use a closure if you only need a single function - objects are for
+#multiple related closures.
 def function_builder(begin, end):
     """ Builds a test function that is closed over begin and end dates """
     fcalendar = furnace.data.fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
     data_cache = furnace.data.yahoo.load_pandas()
+
+    #TODO: should there be a higher level object that combines asset universe and financial calendar?
     asset_factory = furnace.data.asset.AssetUniverse(["SPY", "LQD"], data_cache, fcalendar)
     begin = begin
     end = end

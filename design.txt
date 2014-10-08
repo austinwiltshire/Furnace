@@ -1,0 +1,245 @@
+FEATURES:
+
+* Critical Path:
+** Imminent (Version 2):
+*** 1. add helper function for current baseline - 20% stocks or whever i decided on. that way i can easily compare new strategies cagr/simple sharpe
+*** 2. Add real estate index ( go for history) (compare to baseline)
+*** 3. Add currency index and/or money market (compare to new baseline)
+*** 4. Add commodities index (compare to new baseline)
+*** 5. Create last period (momentum) forecast of CAGR
+*** 6. Create last period forecast of volatility
+*** 7. Create portfolio that weights based on proportional simplified sharpes (no correlation) (compare spy & bonds to baseline, then add new assets to reconfirm)
+*** 8. Create auto regression forecast of CAGR (compare to simple momentum)
+*** 9. Tag as version 2!
+
+** Anticipated:
+*** add max drawdown to performance
+*** add comissions handling
+*** expected return between two dates, including dates that we havent' calculated yet for forecasting (on overall performance, or strategy)
+*** plot portfolio - like plot index but takes a value and accounts for comissions in absolute terms (overall performance)
+*** Add precious metals index
+*** Manufacture volatility strategy - should I trade vixx or make my own iron condors?
+*** Add real portfolio optimization with correlations
+
+* Bells and Whistles
+** add in metadata to allow for readable debugging and plots? i..e, be nice if the plot auto-named it as "Total return of Buy-And-Hold Single Asset with historical forecast on SPY"
+   could take in metadata from portfolio strategy (buy and hold single asset), forecast (historical forecast) and asset universe (spy). probably also rebalance rule
+
+* Tabled
+** panels for different stocks?
+** accrue dividends if you create cap gains models separate from dividends.
+
+PRODUCTIVITY:
+
+* ipython has integration with vim
+* install emacs, evil and org
+* nerd tree should hide pyc
+* nerd tree bookmarks
+* get vim to point swp and un~ files somewhere else
+* git flow
+
+BUGS:
+
+* annual rebalance uses 365 real days as its duration, while nday rebalance uses n TRADING days as its duration. settle on trading days.
+
+REFACTORS:
+
+* General
+** move complex __init__ into factory functions
++ readability
++ consistency
+- large scope
+
+** add doctests to public methods
++ maintainability
+- large scope
+
+** separate out stuff that isn't tested into modules that can be hit with system tests to generate coverage that way. maybe entirely different project?
++ test coverage
++ quality
+- medium scope
+
+** check __iter__ functions to see if we can't refactor their use to inside the object that provides them - then remove __iters__
++ encapsulation
+- large scope
+
+** adding a _repr_ function helps ipython
++ debugability
+- very large scope
+
+** need to make sure i add a test to check return on last day of a period and first day of a period, and another test to ensure that overall performance doesnt' falter on the period boundaries
++ quality
+- small scope
+
+* furnace/data/asset.py
+** look for calls of assetuniverse.__iter__ to see if they can be pulled into asset universe
+   repeat of above
+- very small scope
+
+** look for all calls to asset.table and asset.symbol and see if they can't be moved into asset
++ encapsulation
+- very small scope
+
+* furnace/data/fcalendar.py
+** make FCalendar based on a pandas series, currently a list
++ consistency
++ extensibility
++ speed
+- small scope
+
+** build_trading_date_rule - move dicts to some sort of class level or constant module level depending on what pylint likes
++ speed
++ readability
+- medium scope
+
+** reformat build_trading_date_rule line 78+. pull the rrules out to variables, set strings to those variables. split rrules into multiple lines
++ readability
++ consistency
+- medium scope
+
+** can add helper method here to build a yearly rrule, eliminating that variable.
++ readability
++ modularity
+- small scope
+
+* furnace/test/test_buyandhold.py
+** break this up into a lot of sub tests that might test different strategies
+   after doing this you can rename a lot of these to be more rational names. this was probably a hint you needed to break things up
++ interested
++ decoupling
++ readability. would fix test names
++ simplification
+- large scope
+
+** can break up strategy.py into similar submodules. 
+   there may be some commonality here but be careful about drying things up
++ potential momentum
++ simplification
++ decoupling
+- large scope
+
+* furance/test/test_fcalendar.py
+** make this py.test style
++ consistency
++ code-porri (potporri)
+- small scope
+
+* furnace/performance.py
+** drop fire_furnace, just call strategy.performance_during
++ simplification
+- very small scope
+
+** overallperformance.__init__
+*** add assertion that no period overlaps any other.
+    I think this is done?
+
+** overallperformance
+*** add object invariant that portfolio periods are always sorted. can simplify some methods after this
++ simplifies
++ assertion density
+- small scope
+
+furnace/performance.py
+
+-overallperformance.duration 
+-add assertion that len(self._table.index) == number of trading days between begin and end in financial calendar
+-financial calendar ought to return a pandas series of dates.
+
+overallperformance.simple_sharpe
+-calculate true sharpe by adjusting returns and volatility by returns and volatility of the risk free asset
+-need to settle on whether returns need to be put in one of the following terms:
+106 (percent)
+6 (percent)
+.06 (float) (leaning this way.)
+
+right now i go back and forth. 
+
+furnace/strategy.py
+
+-annualrebalance.periods_during
+-add test that periods during returns the first trading day as the beginning of our first trading period.
+
+-ndayrebalance.periods_during
+-add test that we end properly on the end date when it's viable
+-add test that we have the right number of trading days in a period
+-add test that we fall across weekends and holidays correctly
+
+furnace/portfolio.py
+
+NOTES:
+
+to drop into ipython:
+
+import IPython
+IPython.embed()
+
+only run one test at a time, won't work on multicore or multi test mode
+
+to calculate technical debt:
+
+do a count of todos
+divide by adjusted physical lines of code
+
+to get adjusted physical lines:
+
+run metrics
+take out line count for 'class'
+take out line count for 'def'
+
+assertion density:
+
+to count assertions
+grep assert `find . -regex ".*\.py" | grep -v test` | wc -l 
+
+that takes out tests. divide that by adjusted line count
+
+to capture todos
+
+grep TODO `find . -regex ".*\.py"` 
+
+to calculate metrics:
+
+find . -regex ".*\.py" | xargs metrics
+
+to run tests continuously:
+py.test -n 4 --looponfail
+
+for coverage reports, from root of project
+py.test -n 4 --cov-config _coverage.rc --cov furnace --cov-report html
+
+code smell:
+
+grep pylint `find . -regex ".*\.py"` | wc -l
+
+divide by 2 since each pylint exception is turned on then off.
+divide by adjusted lines
+
+in ipython:
+ctrl-a moves to begin of line
+ctrl-e moves to end of line
+
+libs learned:
+pandas
+
+libs to read:
+scikit-learn, quantlib, statsmodels, scipy, numpy
+
+interesting metrics to track:
+
+number of #pylint: lines. lower is better, means i'm closer to pylint's suggested style and make fewer exceptions ('code smell'? so long as it's pylint clean) 2.3% at last check, goal is 2%
+number of todo's, number of todo's / logical line count - refactoring backlog
+test coverage %, test path coverage %, test logical line count / logical line count, #tests / #functions
+assertion density - last check was 4.47%, go for 5%
+technical debt (todos / adjusted line count) - last check was 4.97%, go for 4%
+comment and docstring length / adjusted logical lines
+something for code modularity? average file size or maybe just look for certain file sizes? not just line count but also method or class count?
+
+principles:
+*REMEMBER*: eliminate waste before improving quality. then you have less work to do!
+
+cycle:
+- feature push
+- code audit
+- plan triage
+- metrics check and adjust. keep coverage up, etc
+

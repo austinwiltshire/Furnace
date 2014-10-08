@@ -1,4 +1,9 @@
 """ A financial calendaring module using dateutil """
+#NOTE: I've modified dateutil according to
+#http://blog.brianbeck.com/post/22129050/speeding-up-dateutil-pythons-heapq-module-turns
+#this does in fact speed things up.
+#This may need to be re-looked at if i move to python 3 or other changes to the dateutil library.
+#It has a new version that's 3 only
 
 from datetime import datetime
 from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
