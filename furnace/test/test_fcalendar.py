@@ -8,6 +8,7 @@ import datetime
 import itertools
 import os.path
 import pickle
+from numpy import datetime64
 
 #pylint: disable=R0904
 class TestFcalendar(unittest.TestCase):
@@ -32,11 +33,15 @@ class TestFcalendar(unittest.TestCase):
     def test_weekdays(self):
         """ Test that normal weekdays are trading dates """
 
-        self.assertTrue(datetime.datetime(2004, 5, 21) in self.trading_dates)
-        self.assertTrue(datetime.datetime(2004, 5, 17) in self.trading_dates)
-        self.assertTrue(datetime.datetime(2004, 5, 18) in self.trading_dates)
-        self.assertTrue(datetime.datetime(2004, 5, 19) in self.trading_dates)
-        self.assertTrue(datetime.datetime(2004, 5, 20) in self.trading_dates)
+        def make_date(year, month, day):
+            """ Helper to create numpy datetimes """
+            return datetime64(datetime.datetime(year, month, day))
+
+        self.assertTrue(make_date(2004, 5, 21) in self.trading_dates.values)
+        self.assertTrue(make_date(2004, 5, 17) in self.trading_dates.values)
+        self.assertTrue(make_date(2004, 5, 18) in self.trading_dates.values)
+        self.assertTrue(make_date(2004, 5, 19) in self.trading_dates.values)
+        self.assertTrue(make_date(2004, 5, 20) in self.trading_dates.values)
 #pylint: enable=R0904
 
 #pylint: disable=R0904
@@ -85,8 +90,6 @@ class TestFCalendarRange(unittest.TestCase):
         calendar = fcalendar.make_fcalendar(begin_date)
         dates_expected = set([day for day in itertools.takewhile(lambda d: d <= end_date, [x for x in calendar])])
 
-#        import IPython
-#        IPython.embed()
         dates_misaligned = dates_available.symmetric_difference(dates_expected)
 
         self.assertEqual(len(dates_misaligned), 0)

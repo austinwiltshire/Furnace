@@ -8,6 +8,7 @@
 from datetime import datetime
 from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
 import bisect
+from pandas import Series
 
 class FCalendar(object):
     """ A financial calendar """
@@ -159,4 +160,4 @@ def build_trading_date_rule(begin_date, end_date=None):
     for exception_date in exception_dates.values():
         trading_dates.exdate(exception_date)
 
-    return list(trading_dates)
+    return Series(list(trading_dates))

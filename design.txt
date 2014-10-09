@@ -20,6 +20,8 @@ FEATURES:
 *** Add precious metals index
 *** Manufacture volatility strategy - should I trade vixx or make my own iron condors?
 *** Add real portfolio optimization with correlations
+*** calculate true sharpe by adjusting returns and volatility by returns and volatility of the risk free asset
+*** ./furnace/strategy.py:64: #TODO: should forecast be similar to asset universe, except it also provides expectations on those assets?
 
 * Bells and Whistles
 ** add in metadata to allow for readable debugging and plots? i..e, be nice if the plot auto-named it as "Total return of Buy-And-Hold Single Asset with historical forecast on SPY"
@@ -139,107 +141,196 @@ REFACTORS:
 + assertion density
 - small scope
 
-furnace/performance.py
+* furnace/performance.py
 
--overallperformance.duration 
--add assertion that len(self._table.index) == number of trading days between begin and end in financial calendar
--financial calendar ought to return a pandas series of dates.
+** overallperformance.duration 
+*** add assertion that len(self._table.index) == number of trading days between begin and end in financial calendar
+? would be easier with below
++ quality
+- small
+*** financial calendar ought to return a pandas series of dates.
++ speed
++ simplifies
++ consistency
+- medium
 
-overallperformance.simple_sharpe
--calculate true sharpe by adjusting returns and volatility by returns and volatility of the risk free asset
--need to settle on whether returns need to be put in one of the following terms:
+** overallperformance.simple_sharpe
+
+*** need to settle on whether returns need to be put in one of the following terms:
 106 (percent)
 6 (percent)
 .06 (float) (leaning this way.)
-
 right now i go back and forth. 
++ consistency
++ quality
++ good design
++ interested
+- large
 
-furnace/strategy.py
+* furnace/strategy.py
 
--annualrebalance.periods_during
--add test that periods during returns the first trading day as the beginning of our first trading period.
+** annualrebalance.periods_during
+*** add test that periods during returns the first trading day as the beginning of our first trading period.
++ quality
+- medium
 
--ndayrebalance.periods_during
--add test that we end properly on the end date when it's viable
--add test that we have the right number of trading days in a period
--add test that we fall across weekends and holidays correctly
+** ndayrebalance.periods_during
+*** add test that we end properly on the end date when it's viable
++ quality
+- small
 
-furnace/portfolio.py
+*** add test that we have the right number of trading days in a period
++ quality
+- small
+
+*** add test that we fall across weekends and holidays correctly
++ quality
+- small
+
+* inline:
+** ./furnace/main.py:16:    #TODO: add factory function to asset factory that automatically loads the data cache.
++ simplicity
+- medium
+
+** ./furnace/main.py:41:    #TODO: add weak test for the pyplot
++ quality
++ coverage
+- medium
+
+** ./furnace/portfolio.py:71:#TODO: remove getter
++ encapsulation
+- medium
+
+** ./furnace/portfolio.py:76:#TODO: remove getter
++ encapsulation
+- medium
+
+** ./furnace/portfolio.py:81:#TODO: make this argument a Weightings aggregate arg and remove assertion
++ OO
++ quality
+- medium
+
+** ./furnace/strategy.py:75:#TODO: add tests that the rebalancing rule handles begin and end dates properly
++ quality
+- medium
+
+** ./furnace/strategy.py:91:#TODO: add test for begin and end being same date
++ quality
+- medium
+
+** ./furnace/strategy.py:122:            #TODO: add 'first day after' convenience functions
++ simplicity
+- small
+
+** ./furnace/strategy.py:153:#TODO: look at eliminating most of these and decomposing common helpers out of them
++ simplicity
+- medium
+
+** ./furnace/strategy.py:233:#TODO: see if these are called more than once
++ simplicity
+- medium
+
+** ./furnace/studies/study_1.py:43:#TODO: does pandas have a plain 'save to csv' function?
++ simplicity
++ consistency
+- medium
+
+** ./furnace/studies/study_1.py:57:    #TODO: should there be a higher level object that combines asset universe and financial calendar?
++ cohesion
++ OO
+- large
+
+** ./furnace/weathermen.py:37:#TODO: this should be a class held by nullforecaster as an inner class
++ cohesion
++ encapsulation
+- large
 
 NOTES:
 
-to drop into ipython:
+* to drop into ipython:
 
 import IPython
 IPython.embed()
 
 only run one test at a time, won't work on multicore or multi test mode
 
-to calculate technical debt:
+* to calculate technical debt:
 
 do a count of todos
 divide by adjusted physical lines of code
 
-to get adjusted physical lines:
+* to get adjusted physical lines:
 
 run metrics
 take out line count for 'class'
 take out line count for 'def'
 
-assertion density:
+* assertion density:
 
 to count assertions
 grep assert `find . -regex ".*\.py" | grep -v test` | wc -l 
-
 that takes out tests. divide that by adjusted line count
 
-to capture todos
+* to capture todos
 
-grep TODO `find . -regex ".*\.py"` 
+grep TODO -n `find . -regex ".*\.py"` 
 
-to calculate metrics:
+-n gets the line number
+
+* to calculate metrics:
 
 find . -regex ".*\.py" | xargs metrics
 
-to run tests continuously:
+* to run tests continuously:
 py.test -n 4 --looponfail
 
-for coverage reports, from root of project
+* for coverage reports, from root of project
 py.test -n 4 --cov-config _coverage.rc --cov furnace --cov-report html
 
-code smell:
+* to run a single test
+py.test -q -s furnace/tests/test_file.py::ClassName
+
+* code smell:
 
 grep pylint `find . -regex ".*\.py"` | wc -l
 
 divide by 2 since each pylint exception is turned on then off.
 divide by adjusted lines
 
-in ipython:
-ctrl-a moves to begin of line
-ctrl-e moves to end of line
+* in ipython:
+** ctrl-a moves to begin of line
+** ctrl-e moves to end of line
 
-libs learned:
-pandas
+* libs learned:
+** pandas
 
-libs to read:
-scikit-learn, quantlib, statsmodels, scipy, numpy
+* libs to read:
+** scikit-learn
+** quantlib
+** statsmodels
+** scipy
+** numpy
 
-interesting metrics to track:
+* interesting metrics to track:
 
-number of #pylint: lines. lower is better, means i'm closer to pylint's suggested style and make fewer exceptions ('code smell'? so long as it's pylint clean) 2.3% at last check, goal is 2%
-number of todo's, number of todo's / logical line count - refactoring backlog
-test coverage %, test path coverage %, test logical line count / logical line count, #tests / #functions
-assertion density - last check was 4.47%, go for 5%
+** number of #pylint: lines. 
+lower is better, means i'm closer to pylint's suggested style and make fewer exceptions ('code smell'? so long as it's pylint clean) 2.3% at last check, goal is 2%
+
+** number of todo's, number of todo's / logical line count - technical debt
 technical debt (todos / adjusted line count) - last check was 4.97%, go for 4%
-comment and docstring length / adjusted logical lines
-something for code modularity? average file size or maybe just look for certain file sizes? not just line count but also method or class count?
 
-principles:
-*REMEMBER*: eliminate waste before improving quality. then you have less work to do!
+** test coverage %, test path coverage %, test logical line count / logical line count, #tests / #functions
+** assertion density - last check was 4.47%, go for 5%
 
-cycle:
-- feature push
-- code audit
-- plan triage
-- metrics check and adjust. keep coverage up, etc
+** comment and docstring length / adjusted logical lines
+** something for code modularity? average file size or maybe just look for certain file sizes? not just line count but also method or class count?
+
+* principles:
+** *REMEMBER*: eliminate waste before improving quality. then you have less work to do!
+
+** cycle:
+*** feature push
+*** code audit
+*** plan triage
+*** metrics check and adjust. keep coverage up, etc
 
