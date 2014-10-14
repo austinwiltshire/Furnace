@@ -82,28 +82,6 @@ REFACTORS:
 + encapsulation
 - very small scope
 
-* furnace/data/fcalendar.py
-** make FCalendar based on a pandas series, currently a list
-+ consistency
-+ extensibility
-+ speed
-- small scope
-
-** build_trading_date_rule - move dicts to some sort of class level or constant module level depending on what pylint likes
-+ speed
-+ readability
-- medium scope
-
-** reformat build_trading_date_rule line 78+. pull the rrules out to variables, set strings to those variables. split rrules into multiple lines
-+ readability
-+ consistency
-- medium scope
-
-** can add helper method here to build a yearly rrule, eliminating that variable.
-+ readability
-+ modularity
-- small scope
-
 * furnace/test/test_buyandhold.py
 ** break this up into a lot of sub tests that might test different strategies
    after doing this you can rename a lot of these to be more rational names. this was probably a hint you needed to break things up
@@ -148,11 +126,6 @@ REFACTORS:
 ? would be easier with below
 + quality
 - small
-*** financial calendar ought to return a pandas series of dates.
-+ speed
-+ simplifies
-+ consistency
-- medium
 
 ** overallperformance.simple_sharpe
 

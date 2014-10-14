@@ -50,8 +50,6 @@ class OverallPerformance(object):
     def volatility(self):
         """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility
-        #daily volatility is the sqrt of period variance. this is annualized by multiplying it by number of trading
-        #days in a year
         return numpy.sqrt(trading_days_in_year()*self._table["Daily Returns"].var())
 
     def growth_by(self, date):
