@@ -3,8 +3,11 @@
     an asset might be better looked at as a table, rather than a pure OO abstraction. It represents all price data,
     not just one day's worth """
 
+#TODO: this is more of an asset factory. An asset universe is a separate set of assets and probably needs
+#to be it's own object.
 class AssetUniverse(object):
     """ Represents all tradable assets for any particular model. """
+    #TODO: move self._assets line to a factory function
     def __init__(self, supported_symbols, data_cache, calendar):
         self._data_cache = data_cache
         self._calendar = calendar
@@ -26,15 +29,6 @@ class AssetUniverse(object):
         """ Predicate on whether symbol is in this asset universe """
         return symbol in self._supported_symbols
 
-    def __iter__(self):
-        return self._assets.itervalues()
-
-    def restricted_to(self, supported_symbols):
-        """ Subsets this asset universe on the passed in symbols """
-        assert set(supported_symbols).issubset(self._supported_symbols)
-
-        return AssetUniverse(supported_symbols, self._data_cache, self._calendar)
-
     def cardinality(self):
         """ Returns the size of this asset universe """
         return len(self._supported_symbols)
@@ -42,6 +36,7 @@ class AssetUniverse(object):
 
 class Asset(object):
     """ Represents a tradable security, by symbol, over a period of time """
+    #TODO: add complex initialization to factory function
     def __init__(self, symbol, data_cache, calendar):
         self._symbol = symbol
         self._data_cache = data_cache
@@ -58,8 +53,3 @@ class Asset(object):
     def table(self):
         """ Accessor for the table this object is based on """
         return self._data_cache
-
-    def symbol(self):
-        """ Accessor for symbol this object is based on """
-        return self._symbol
-

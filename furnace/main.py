@@ -24,7 +24,7 @@ def test_main():
     #NOTE: below is a monday, the first and second of the month was a weekend
     begin = calendar.nth_trading_day_after(0, datetime.datetime(2003, 1, 2))
     end = calendar.nth_trading_day_before(0, datetime.datetime(2012, 12, 31))
-    stocks_perf = furnace.performance.fire_furnace(strategy.buy_and_hold_stocks(asset_factory.restricted_to(["SPY"]),
+    stocks_perf = furnace.performance.fire_furnace(strategy.buy_and_hold_stocks(asset_factory,
                                                                                 begin,
                                                                                 end),
                                                    begin,

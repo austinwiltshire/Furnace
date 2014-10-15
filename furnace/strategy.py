@@ -159,9 +159,7 @@ def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
     assert asset_universe.supports_date(begin_date)
     assert asset_universe.supports_symbol(symbol)
 
-    asset_universe = asset_universe.restricted_to([symbol])
-
-    return Strategy(portfolio.SingleAsset(),
+    return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
                     BuyAndHold(begin_date, end_date),
                     weathermen.NullForecaster())
@@ -177,7 +175,7 @@ def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weig
                                        for symbol, weight in zip(symbols, weights)])
 
     return Strategy(portfolio.StaticTarget(weightings),
-                    asset_universe.restricted_to(symbols),
+                    asset_universe,
                     BuyAndHold(begin_date, end_date),
                     weathermen.NullForecaster())
 
@@ -186,9 +184,7 @@ def yearly_rebalance_single_asset(asset_universe, fcalendar, symbol):
 
     assert asset_universe.supports_symbol(symbol)
 
-    asset_universe = asset_universe.restricted_to([symbol])
-
-    return Strategy(portfolio.SingleAsset(),
+    return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
                     AnnualRebalance(fcalendar),
                     weathermen.NullForecaster())
@@ -201,7 +197,7 @@ def yearly_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights):
                                        for symbol, weight in zip(symbols, weights)])
 
     return Strategy(portfolio.StaticTarget(weightings),
-                    asset_universe.restricted_to(symbols),
+                    asset_universe,
                     AnnualRebalance(fcalendar),
                     weathermen.NullForecaster())
 
@@ -210,9 +206,7 @@ def ndays_rebalance_single_asset(asset_universe, fcalendar, symbol, days):
 
     assert asset_universe.supports_symbol(symbol)
 
-    asset_universe = asset_universe.restricted_to([symbol])
-
-    return Strategy(portfolio.SingleAsset(),
+    return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
                     NDayRebalance(fcalendar, days),
                     weathermen.NullForecaster())

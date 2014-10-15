@@ -18,6 +18,7 @@ def fire_furnace(strategy, begin_date, end_date):
 class OverallPerformance(object):
     """ OverallPerformance is how a strategy does over time. """
 
+    #TODO: add table stuff to a factory function
     def __init__(self, portfolio_periods, asset_universe):
         """ Currently expects a dict of dates to portfolios """
         assert sorted(portfolio_periods, key=PeriodPerformance.begin) == portfolio_periods

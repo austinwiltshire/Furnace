@@ -24,12 +24,14 @@ class PortfolioOptimizer(object):
 #NOTE: too few public methods
 class SingleAsset(PortfolioOptimizer):
     """ A portfolio that holds a single asset - gets the asset to hold from its asset universe """
+    def __init__(self, asset):
+        self._asset = asset
 
     def optimize(self, _, asset_universe):
-        """ We simply hold 100% of whatever asset we are restricted to """
-        assert asset_universe.cardinality() == 1
-        asset = [symbol for symbol in asset_universe][0]
-        return Weightings([Weighting(asset, 1.0)])
+        """ We hold 100% of one asset """
+#        assert asset_universe.cardinality() == 1
+#        asset = [symbol for symbol in asset_universe.symbols()][0]
+        return Weightings([Weighting(self._asset, 1.0)])
 #pylint: enable=R0903
 
 # pylint: disable=R0903
@@ -93,12 +95,10 @@ def make_index(weightings, date):
 
         #get the initial weight based on close, then readjust downward to unbias for any initial basis adjustment
         #due to preexisting dividends
-        initial_basis = (weighting.weight() / table.ix[date]['Close']) / table.ix[date]['Basis Adjustment']
+#        initial_basis = weighting.weight() / (table.ix[date]['Close'] * table.ix[date]['Basis Adjustment'])
+        initial_basis = weighting.weight() / table.ix[date]['Adjusted Close']
 
-        series = table['Adjusted Close'] * initial_basis
-        series.name = weighting.asset().symbol() + "_partial_adjusted_value"
-
-        return series
+        return table['Adjusted Close'] * initial_basis
 
     index_value = pandas.concat([make_partial_index(weighting) for weighting in weightings], axis=1).sum(axis=1)
     return Index(index_value, weightings, date)
