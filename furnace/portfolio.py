@@ -60,7 +60,9 @@ class Weightings(object):
 
     def make_index_on(self, date):
         """ Creates an index of these weightings on date """
-        return make_index(self, date)
+
+        index_value = pandas.concat([weighting.make_partial_index(date) for weighting in self._weightings], axis=1).sum(axis=1)
+        return Index(index_value, self, date)
 # pylint: enable=R0903
 
 class Weighting(object):
@@ -80,28 +82,10 @@ class Weighting(object):
         """ Getter for weight """
         return self._weight
 
-#TODO: make this argument a Weightings aggregate arg and remove assertion
-def make_index(weightings, date):
-    """ Returns an index object from a list of weightings. Weightings must add
-    up to 1.0 """
-    assert numpy.isclose(sum(weighting.weight() for weighting in weightings), 1.0)
-
     #computes the decomposed total return of a weighted asset
-    #NOTE: this function is slow, especially in rapidly readjusted strategies
-    def make_partial_index(weighting):
-        """ Helper method adds necessary columns to a table """
-        table = weighting.asset().table()
-        table = table[table.index >= date]
-
-        #get the initial weight based on close, then readjust downward to unbias for any initial basis adjustment
-        #due to preexisting dividends
-#        initial_basis = weighting.weight() / (table.ix[date]['Close'] * table.ix[date]['Basis Adjustment'])
-        initial_basis = weighting.weight() / table.ix[date]['Adjusted Close']
-
-        return table['Adjusted Close'] * initial_basis
-
-    index_value = pandas.concat([make_partial_index(weighting) for weighting in weightings], axis=1).sum(axis=1)
-    return Index(index_value, weightings, date)
+    def make_partial_index(self, date):
+        """ Creates an index who's basis is weighted initially """
+        return self.asset().make_index(date, self.weight())
 
 # pylint: disable=R0903
 #NOTE: too few public methods

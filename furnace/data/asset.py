@@ -39,17 +39,34 @@ class Asset(object):
     #TODO: add complex initialization to factory function
     def __init__(self, symbol, data_cache, calendar):
         self._symbol = symbol
-        self._data_cache = data_cache
+        self._table = data_cache
         self._calendar = calendar
-        self._data_cache["Yield"] = self._data_cache['Dividends'] / self._data_cache['Close']
-        accumulated_yield = (self._data_cache["Yield"] + 1.0).dropna().cumprod()
+        self._table["Yield"] = self._table['Dividends'] / self._table['Close']
+        accumulated_yield = (self._table["Yield"] + 1.0).dropna().cumprod()
 
         #note: we assume dividends are reinvested on the day of
-        self._data_cache["Basis Adjustment"] = accumulated_yield.reindex(self._data_cache.index,
+        self._table["Basis Adjustment"] = accumulated_yield.reindex(self._table.index,
                                                                          method='ffill',
                                                                          fill_value=1.0)
-        self._data_cache["Adjusted Close"] = self._data_cache["Close"] * self._data_cache["Basis Adjustment"]
+        self._table["Adjusted Close"] = self._table["Close"] * self._table["Basis Adjustment"]
 
-    def table(self):
-        """ Accessor for the table this object is based on """
-        return self._data_cache
+#    def table(self):
+#        """ Accessor for the table this object is based on """
+#        return self._table
+
+    #NOTE: this function is slow, especially in rapidly readjusted strategies
+    #TODO: why not set an end to the index? a lot of the index values are thrown away for fast changing dates
+    def make_index(self, date, basis):
+        """ Creates an index for this asset weighted initially at basis """
+        table = self._table[self._table.index >= date]
+
+        initial_basis = basis / table.ix[date]['Adjusted Close']
+
+        return table['Adjusted Close'] * initial_basis
+
+    def yahoo_adjusted_return(self, begin, end):
+        """ Helper method to get yahoo's own reported return, useful for debugging """
+        first = self._table.ix[begin]['Adj Close']
+        last = self._table.ix[end]['Adj Close']
+        return (last - first) / first
+

@@ -33,13 +33,6 @@ def make_default_asset_factory(symbols):
     data_cache = yahoo.load_pandas()
     return asset.AssetUniverse(symbols, data_cache, calendar)
 
-def yahoo_adjusted_close_return(asset_, begin, end):
-    """ Helper to calculate dividend and split adjusted total return using yahoo stats """
-    adj_close = asset_.table()[asset_.table().index >= datetime(2003, 1, 2)]['Adj Close']
-    first = adj_close[begin]
-    last = adj_close[end]
-    return (last - first) / first
-
 #tests
 def test_buy_and_hold_spy_cagr():
     """ Tests a buy and hold CAGR of the SPY from 1-2-3003 to 12-31-2012
@@ -63,8 +56,8 @@ def test_all_spy_index_total_return():
     asset_factory = make_default_asset_factory(["SPY"])
     spy = asset_factory.make_asset("SPY")
 
-    index = portfolio.make_index([portfolio.Weighting(spy, 1.0)], begin)
-    adj_return = yahoo_adjusted_close_return(spy, begin, end)
+    index = portfolio.Weightings([portfolio.Weighting(spy, 1.0)]).make_index_on(begin)
+    adj_return = spy.yahoo_adjusted_return(begin, end)
 
     assert is_close(index.total_return_by(end), adj_return)
 
@@ -76,8 +69,8 @@ def test_all_lqd_index_total_return():
     asset_factory = make_default_asset_factory(["LQD"])
     lqd = asset_factory.make_asset("LQD")
 
-    index = portfolio.make_index([portfolio.Weighting(lqd, 1.0)], begin)
-    adj_return = yahoo_adjusted_close_return(lqd, begin, end)
+    index = portfolio.Weightings([portfolio.Weighting(lqd, 1.0)]).make_index_on(begin)
+    adj_return = lqd.yahoo_adjusted_return(begin, end)
 
     assert is_close(index.total_return_by(end), adj_return)
 
@@ -90,8 +83,8 @@ def test_empty_mixed_index():
     lqd = asset_factory.make_asset("LQD")
     spy = asset_factory.make_asset("SPY")
 
-    index = portfolio.make_index([portfolio.Weighting(spy, 0.0), portfolio.Weighting(lqd, 1.0)], begin)
-    index2 = portfolio.make_index([portfolio.Weighting(lqd, 1.0)], begin)
+    index = portfolio.Weightings([portfolio.Weighting(spy, 0.0), portfolio.Weighting(lqd, 1.0)]).make_index_on(begin)
+    index2 = portfolio.Weightings([portfolio.Weighting(lqd, 1.0)]).make_index_on(begin)
 
     assert is_close(index.total_return_by(end), index2.total_return_by(end))
 
@@ -155,8 +148,8 @@ def test_spy_lqd_mix_index_ttl_rtn():
 
     asset_factory = make_default_asset_factory(["SPY", "LQD"])
 
-    index = portfolio.make_index([portfolio.Weighting(asset_factory.make_asset("LQD"), 0.5),
-                                  portfolio.Weighting(asset_factory.make_asset("SPY"), 0.5)],
+    index = portfolio.Weightings([portfolio.Weighting(asset_factory.make_asset("LQD"), 0.5),
+                                  portfolio.Weighting(asset_factory.make_asset("SPY"), 0.5)]).make_index_on(
                                  datetime(2003, 1, 2))
 
     assert is_close(index.total_return_by(datetime(2012, 12, 31)), .900)
