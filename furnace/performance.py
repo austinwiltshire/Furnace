@@ -20,7 +20,10 @@ class OverallPerformance(object):
 
     #TODO: add table stuff to a factory function
     def __init__(self, portfolio_periods, asset_universe):
-        """ Currently expects a dict of dates to portfolios """
+        """ Currently expects a dict of dates to portfolios. Period performances are inclusive of end
+        dates and exclusive of begin dates. That means altogether, they're inclusive of the entire trading
+        period and it's end and exclusive of it's end. We have a single special case to handle that in
+        overall performance. """
         assert sorted(portfolio_periods, key=PeriodPerformance.begin) == portfolio_periods
         assert not any(
             period1.overlaps_with(period2)
@@ -83,17 +86,21 @@ class OverallPerformance(object):
 
 def make_period_performance(begin_date, end_date, index):
     """ Factory for a period performance object """
+    #NOTE: due to how pct_change works, we're inclusive of the end date, but exclusive of the starting date.
 
     begin = begin_date
 
     index = index.table
     index = index[index.index >= begin][index.index <= end_date]
     table = pandas.DataFrame()
+
     table["Daily Returns"] = index.pct_change().dropna()
     return PeriodPerformance(begin, end_date, table)
 
 class PeriodPerformance(object):
-    """ How a strategy does over it's trading period """
+    """ How a strategy does over it's trading period. A period performance is exclusive of it's begin
+    date and inclusive of it's end date. In other words, if we had a period performance that started
+    today, the soonest we'd have data available is tomorrow since today is our 'buy' point """
 
     def __init__(self, begin_date, end_date, table):
         self._begin_date = begin_date
@@ -103,6 +110,10 @@ class PeriodPerformance(object):
     def daily_returns(self):
         """ Returns a daily series of this period's returns """
         return self._table["Daily Returns"]
+
+    def number_of_days(self):
+        """ Returns number of trading days in this period """
+        return len(self._table)
 
     def begin(self):
         """ Returns start date of this period """

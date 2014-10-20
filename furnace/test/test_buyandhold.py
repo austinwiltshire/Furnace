@@ -104,6 +104,54 @@ def test_buy_and_hold_spy_growth_by():
     assert is_close(performance_.growth_by(datetime(2005, 1, 3)), 1.368)
     assert is_close(performance_.growth_by(end), 1.906)
 
+def test_period_ends():
+    """ Test that returns line up across period ends and beginnings with expectations """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY"])
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+
+    reference = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    rebalanced = strategy.yearly_rebalance_single_asset(asset_factory, calendar, "SPY")
+
+    periods = list(rebalanced.periods_during(begin, end))
+    first_start = periods[0].begin()
+    first_end = periods[0].end()
+    second_start = periods[1].begin()
+    second_end = periods[1].end()
+    last_start = periods[-1].begin()
+    last_end = periods[-1].end()
+
+    reference_performance = performance.fire_furnace(reference, begin, end)
+    rebalanced_performance = performance.fire_furnace(rebalanced, begin, end)
+
+    def equivalent_performance(date):
+        """ Checks that reference and rebalanced portfolio growth is the same """
+        return is_close(reference_performance.growth_by(date), rebalanced_performance.growth_by(date))
+
+    assert first_end == second_start
+
+    assert equivalent_performance(first_start)
+    assert equivalent_performance(first_end)
+    assert equivalent_performance(second_start)
+    assert equivalent_performance(second_end)
+    assert equivalent_performance(last_start)
+    assert equivalent_performance(last_end)
+
+def test_first_day():
+    """ Test that an annually rebalanced portfolio has as it's first day the first trading day """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["SPY"])
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+
+    rebalanced = strategy.yearly_rebalance_single_asset(asset_factory, calendar, "SPY")
+
+    periods = list(rebalanced.periods_during(begin, end))
+    first_start = periods[0].begin()
+
+    assert first_start == begin
+
 def test_bh_stocks_and_bonds_cagr():
     """ Tests buy and hold of two assets, spy and lqd, cagr metric from 2003-1-2 to 2012-12-31
 
@@ -272,6 +320,22 @@ def test_single_yearly_daily():
     test_date = datetime(2011, 12, 30)
 
     assert is_close(rebalanced_perf.growth_by(test_date), buy_and_hold_perf.growth_by(test_date))
+
+def test_nday_supports_end_period():
+    """ Test that the last day of an nday trading period falls n absolute days after beginning if there is
+    nothing but valid trading days in between """
+    begin = datetime(2012, 1, 3)
+    end = datetime(2012, 1, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY"])
+
+    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 2)
+
+    periods = list(rebalanced.periods_during(begin, end))
+
+    #the end of the first period should be 2 trading days in, starting on the 3rd, so 2012, 1, 5
+    assert periods[0].begin() == datetime(2012, 1, 3)
+    assert periods[0].end() == datetime(2012, 1, 5)
 
 def test_simple_sharpe():
     """ Regression test of simplified sharpe ratio """

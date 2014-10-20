@@ -47,11 +47,6 @@ BUGS:
 REFACTORS:
 
 * General
-** move complex __init__ into factory functions
-+ readability
-+ consistency
-- large scope
-
 ** add doctests to public methods
 + maintainability
 - large scope
@@ -69,18 +64,6 @@ REFACTORS:
 + debugability
 - very large scope
 
-** need to make sure i add a test to check return on last day of a period and first day of a period, and another test to ensure that overall performance doesnt' falter on the period boundaries
-+ quality
-- small scope
-
-* furnace/data/asset.py
-** look for calls of assetuniverse.__iter__ to see if they can be pulled into asset universe
-   repeat of above
-- very small scope
-
-** look for all calls to asset.table and asset.symbol and see if they can't be moved into asset
-+ encapsulation
-- very small scope
 
 * furnace/test/test_buyandhold.py
 ** break this up into a lot of sub tests that might test different strategies
@@ -108,10 +91,6 @@ REFACTORS:
 ** drop fire_furnace, just call strategy.performance_during
 + simplification
 - very small scope
-
-** overallperformance.__init__
-*** add assertion that no period overlaps any other.
-    I think this is done?
 
 ** overallperformance
 *** add object invariant that portfolio periods are always sorted. can simplify some methods after this
@@ -142,17 +121,10 @@ right now i go back and forth.
 
 * furnace/strategy.py
 
-** annualrebalance.periods_during
-*** add test that periods during returns the first trading day as the beginning of our first trading period.
-+ quality
-- medium
-
-** ndayrebalance.periods_during
-*** add test that we end properly on the end date when it's viable
-+ quality
-- small
-
 *** add test that we have the right number of trading days in a period
+
+this is hard to do with a test, is there an assert?
+
 + quality
 - small
 

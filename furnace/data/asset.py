@@ -50,10 +50,6 @@ class Asset(object):
                                                                          fill_value=1.0)
         self._table["Adjusted Close"] = self._table["Close"] * self._table["Basis Adjustment"]
 
-#    def table(self):
-#        """ Accessor for the table this object is based on """
-#        return self._table
-
     #NOTE: this function is slow, especially in rapidly readjusted strategies
     #TODO: why not set an end to the index? a lot of the index values are thrown away for fast changing dates
     def make_index(self, date, basis):
