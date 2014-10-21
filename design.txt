@@ -119,19 +119,6 @@ right now i go back and forth.
 + interested
 - large
 
-* furnace/strategy.py
-
-*** add test that we have the right number of trading days in a period
-
-this is hard to do with a test, is there an assert?
-
-+ quality
-- small
-
-*** add test that we fall across weekends and holidays correctly
-+ quality
-- small
-
 * inline:
 ** ./furnace/main.py:16:    #TODO: add factory function to asset factory that automatically loads the data cache.
 + simplicity
@@ -152,14 +139,6 @@ this is hard to do with a test, is there an assert?
 
 ** ./furnace/portfolio.py:81:#TODO: make this argument a Weightings aggregate arg and remove assertion
 + OO
-+ quality
-- medium
-
-** ./furnace/strategy.py:75:#TODO: add tests that the rebalancing rule handles begin and end dates properly
-+ quality
-- medium
-
-** ./furnace/strategy.py:91:#TODO: add test for begin and end being same date
 + quality
 - medium
 

@@ -28,6 +28,10 @@ class FCalendar(object):
 
         return self._dates[bisect.bisect_right(self._dates, a_date) - (nth + 1)]
 
+    def trading_days_between(self, begin, end):
+        """ Returns the number of trading days between begin and end, exclusive of begin inclusive of end """
+        return len(self._dates[self._dates > begin][self._dates <= end])
+
 def make_fcalendar(begin_date):
     """ Factory function for financial calendars """
     return FCalendar(build_trading_date_rule(begin_date))

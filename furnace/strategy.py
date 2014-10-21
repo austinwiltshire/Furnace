@@ -7,6 +7,7 @@ from furnace import performance
 from furnace import weathermen
 from furnace import portfolio
 from dateutil.rrule import rrule, YEARLY
+import datetime
 import abc
 
 class TradingPeriod(object):
@@ -60,7 +61,6 @@ class Strategy(object):
         """ Generates a target portfolio this strategy would recommend for date """
 
         forecast = self.forecast(date)
-        
         #TODO: should forecast be similar to asset universe, except it also provides expectations on those assets?
         #if so, then we don't have to pass in asset universe here, forecast can provide functions like cardinality
         #and construction
@@ -142,7 +142,9 @@ class NDayRebalance(RebalancingRule):
 
         dates = [date for date in self._fcalendar]
         current = dates.index(self._fcalendar.nth_trading_day_after(0, begin_date))
-        end = dates.index(self._fcalendar.nth_trading_day_before(0, end_date))
+
+        #NOTE: we add one day to ensure that if end is a trading day we count it as our last period's end
+        end = dates.index(self._fcalendar.nth_trading_day_before(0, end_date + datetime.timedelta(1)))
         periods = zip(dates[current:end-self._ndays:self._ndays], dates[current + self._ndays:end:self._ndays])
         return (TradingPeriod(date1, date2) for date1, date2 in periods)
 
