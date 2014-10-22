@@ -33,6 +33,10 @@ def make_default_asset_factory(symbols):
     data_cache = yahoo.load_pandas()
     return asset.AssetUniverse(symbols, data_cache, calendar)
 
+def compound_growth(*returns):
+    """ Returns the compound return of the associated individual returns """
+    return (1.0 + numpy.array(returns)).prod() - 1.0
+
 #tests
 def test_buy_and_hold_spy_cagr():
     """ Tests a buy and hold CAGR of the SPY from 1-2-3003 to 12-31-2012
@@ -40,12 +44,13 @@ def test_buy_and_hold_spy_cagr():
     """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY"])
 
-    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.cagr(), 1.067)
+    assert is_close(performance_.cagr(), 0.0667)
 
 def test_all_spy_index_total_return():
     """ Tests the total return of an all SPY index between 2003-1-2 and 2012-12-31 is same as yahoo adj return
@@ -94,15 +99,16 @@ def test_buy_and_hold_spy_growth_by():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY"])
-    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.growth_by(begin), 1.00)
-    assert is_close(performance_.growth_by(datetime(2004, 2, 2)), 1.272)
-    assert is_close(performance_.growth_by(datetime(2005, 1, 3)), 1.368)
-    assert is_close(performance_.growth_by(end), 1.906)
+    assert is_close(performance_.growth_by(begin), 0.00)
+    assert is_close(performance_.growth_by(datetime(2004, 2, 2)), 0.272)
+    assert is_close(performance_.growth_by(datetime(2005, 1, 3)), 0.368)
+    assert is_close(performance_.growth_by(end), 0.906)
 
 def test_period_ends():
     """ Test that returns line up across period ends and beginnings with expectations """
@@ -111,7 +117,7 @@ def test_period_ends():
     asset_factory = make_default_asset_factory(["SPY"])
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
 
-    reference = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    reference = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
     rebalanced = strategy.yearly_rebalance_single_asset(asset_factory, calendar, "SPY")
 
     periods = list(rebalanced.periods_during(begin, end))
@@ -161,11 +167,12 @@ def test_bh_stocks_and_bonds_cagr():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
     asset_factory = make_default_asset_factory(["SPY", "LQD"])
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.cagr(), 1.066)
+    assert is_close(performance_.cagr(), 0.0666)
 
 def test_bh_stcks_n_bnds_growth_by():
     """ Tests buy and hold stocks and bonds strategy with two assets, spy and lqd, looking at growth by at multiple
@@ -176,14 +183,15 @@ def test_bh_stcks_n_bnds_growth_by():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
     asset_factory = make_default_asset_factory(["SPY", "LQD"])
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.growth_by(begin), 1.0)
-    assert is_close(performance_.growth_by(datetime(2003, 2, 3)), 0.960)
-    assert is_close(performance_.growth_by(datetime(2004, 1, 2)), 1.214)
-    assert is_close(performance_.growth_by(end), 1.903)
+    assert is_close(performance_.growth_by(begin), 0.0)
+    assert is_close(performance_.growth_by(datetime(2003, 2, 3)), -0.0396)
+    assert is_close(performance_.growth_by(datetime(2004, 1, 2)), 0.2144)
+    assert is_close(performance_.growth_by(end), 0.903)
 
 def test_spy_lqd_mix_index_ttl_rtn():
     """ Test an index of 50% spy and 50% lqd, total_return_by, between 2003-1-2 and 2012-12-31
@@ -208,7 +216,8 @@ def test_volatility():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
     asset_factory = make_default_asset_factory(["SPY", "LQD"])
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
@@ -222,7 +231,7 @@ def test_single_asset_yearly():
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY"])
     rebalanced = strategy.yearly_rebalance_single_asset(asset_factory, calendar, "SPY")
-    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
@@ -247,7 +256,7 @@ def test_multi_asset_yearly():
 
     def get_buy_and_hold_perf(begin, end):
         """ Helper to get buy and hold strategy performance over a period """
-        strat = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
+        strat = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
         return performance.fire_furnace(strat, begin, end).growth_by(end)
 
     year_1_perf = get_buy_and_hold_perf(year_2003, year_2004)
@@ -255,8 +264,8 @@ def test_multi_asset_yearly():
     year_3_perf = get_buy_and_hold_perf(year_2005, year_2006)
 
     assert is_close(performance_.growth_by(year_2004), year_1_perf)
-    assert is_close(performance_.growth_by(year_2005), year_1_perf * year_2_perf)
-    assert is_close(performance_.growth_by(year_2006), year_1_perf * year_2_perf * year_3_perf)
+    assert is_close(performance_.growth_by(year_2005), compound_growth(year_1_perf, year_2_perf))
+    assert is_close(performance_.growth_by(year_2006), compound_growth(year_1_perf, year_2_perf, year_3_perf))
 
 def test_multi_asset_yearly_uneq():
     """ Test that holding a multi asset index with a yearly rebalance is *not* equal to the returns of a straight
@@ -268,7 +277,7 @@ def test_multi_asset_yearly_uneq():
     end = datetime(2006, 1, 3)
 
     rebalance = strategy.yearly_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2])
-    buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end)
+    buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
 
     rebalance_perf = performance.fire_furnace(rebalance, begin, end)
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
@@ -287,7 +296,7 @@ def test_multi_asset_yearly_hand():
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
-    assert is_close(performance_.growth_by(end), 1.573)
+    assert is_close(performance_.growth_by(end), 0.574)
 
 def test_daily_yearly_eq():
     """ Tests that a 365 day rebalancing rule is equivalent to a yearly rebalancing rule """
@@ -313,7 +322,7 @@ def test_single_yearly_daily():
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY"])
     rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
-    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end)
+    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
@@ -464,8 +473,9 @@ def test_number_of_trades_buyhold():
     """ Buy and hold of one single asset should have one single trade date """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY"])
-    buy_and_hold = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SPY")
+    buy_and_hold = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SPY", calendar)
 
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
 

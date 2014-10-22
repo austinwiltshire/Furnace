@@ -10,6 +10,10 @@ from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, T
 import bisect
 from pandas import Series
 
+def trading_days_in_year():
+    """ Constant number of trading days in a year. We use a somewhat standard 252 """
+    return 252.0
+
 class FCalendar(object):
     """ A financial calendar """
     def __init__(self, dates):

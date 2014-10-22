@@ -9,6 +9,7 @@ from furnace import portfolio
 from dateutil.rrule import rrule, YEARLY
 import datetime
 import abc
+import furnace.data.fcalendar
 
 class TradingPeriod(object):
     """ The begining and end of an entire trading period on which metrics can be collected """
@@ -89,10 +90,11 @@ class BuyAndHold(RebalancingRule):
     """ Buy and hold never trades - it starts with its beginning portfolio and holds it until the end """
 
 #TODO: add test for begin and end being same date
-    def __init__(self, begin_date, end_date):
+    def __init__(self, begin_date, end_date, fcalendar):
         assert begin_date <= end_date
         self._begin_date = begin_date
         self._end_date = end_date
+        self._fcalendar = fcalendar
 
     def periods_during(self, begin_date, end_date):
         """ Returns a single trading period: begin to end """
@@ -102,10 +104,9 @@ class BuyAndHold(RebalancingRule):
 
         yield TradingPeriod(begin_date, end_date)
 
-#FIXME: this is incorrect - this should be number of *trading* days.
     def period_length(self):
         """ Returns the length of the buy and hold period """
-        return (self._end_date - self._begin_date).days
+        return self._fcalendar.trading_days_between(self._begin_date, self._end_date)
 
 class AnnualRebalance(RebalancingRule):
     """ Annual rebalance rebalances every year on same day as begin_date """
@@ -123,11 +124,10 @@ class AnnualRebalance(RebalancingRule):
             yield TradingPeriod(self._fcalendar.nth_trading_day_after(0, period_begin),
                                 self._fcalendar.nth_trading_day_after(0, period_end))
 
-#FIXME: this should be number of *trading* days
     def period_length(self):
         """ Returns a years length in real days. Period length would generally find the closest trading day to one year
         out """
-        return 365
+        return furnace.data.fcalendar.trading_days_in_year()
 
 class NDayRebalance(RebalancingRule):
     """ Rebalances every n days TRADING from begin date """
@@ -154,7 +154,7 @@ class NDayRebalance(RebalancingRule):
 
 #TODO: look at eliminating most of these and decomposing common helpers out of them
 #family strategies
-def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
+def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol, fcalendar):
     """ Purchases a single asset at the beginning of the period and holds it to the end.
     Represents a family of potential strategies """
 
@@ -163,10 +163,10 @@ def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol):
 
     return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
-                    BuyAndHold(begin_date, end_date),
+                    BuyAndHold(begin_date, end_date, fcalendar),
                     weathermen.NullForecaster())
 
-def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weights):
+def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weights, fcalendar):
     """ Purchses a set of assets with specific weights at the beginning of the period and holds them to the end.
     Represents a family of buy and hold multi asset strategies that vary on asset mix and weights """
 
@@ -178,7 +178,7 @@ def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weig
 
     return Strategy(portfolio.StaticTarget(weightings),
                     asset_universe,
-                    BuyAndHold(begin_date, end_date),
+                    BuyAndHold(begin_date, end_date, fcalendar),
                     weathermen.NullForecaster())
 
 def yearly_rebalance_single_asset(asset_universe, fcalendar, symbol):
@@ -228,14 +228,14 @@ def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, day
 
 #TODO: see if these are called more than once
 #particular strategies
-def buy_and_hold_stocks(asset_universe, begin_date, end_date):
+def buy_and_hold_stocks(asset_universe, begin_date, end_date, fcalendar):
     """ Purchases the SPY at the beginning period and holds it to the end """
-    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "SPY")
+    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "SPY", fcalendar)
 
-def buy_and_hold_bonds(asset_universe, begin_date, end_date):
+def buy_and_hold_bonds(asset_universe, begin_date, end_date, fcalendar):
     """ Purchases the LQD at the beginning period and holds it to the end """
-    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "LQD")
+    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "LQD", fcalendar)
 
-def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date):
+def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date, fcalendar):
     """ Purchases 80% SPY and 20% LQD """
-    return buy_and_hold_multi_asset(asset_universe, begin_date, end_date, ["SPY", "LQD"], [.8, .2])
+    return buy_and_hold_multi_asset(asset_universe, begin_date, end_date, ["SPY", "LQD"], [.8, .2], fcalendar)

@@ -4,10 +4,7 @@ import numpy
 import pandas
 import datetime
 import itertools
-
-def trading_days_in_year():
-    """ Constant number of trading days in a year. We use a somewhat standard 252 """
-    return 252.0
+import furnace.data.fcalendar
 
 #NOTE: this used to be a single method on an object. Would make sense to refactor to that if we need to add more state
 #to our simulation
@@ -36,7 +33,7 @@ class OverallPerformance(object):
 
         table = pandas.DataFrame()
         table["Daily Returns"] = pandas.concat(period.daily_returns() for period in self._portfolio_periods)
-        table["Cumulative Returns"] = (table["Daily Returns"] + 1.0).cumprod()
+        table["Cumulative Returns"] = ((table["Daily Returns"] + 1.0).cumprod() - 1.0)
         self._table = table
 
     def total_return(self):
@@ -49,23 +46,23 @@ class OverallPerformance(object):
 
     def cagr(self):
         """ Returns the compound annual growth rate """
-        return pow(self.total_return(), 1.0 / (self.duration().days / trading_days_in_year()))
+        return pow(1.0 + self.total_return(), 1.0 / (self.duration().days / furnace.data.fcalendar.trading_days_in_year())) - 1.0
 
     def volatility(self):
         """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility
-        return numpy.sqrt(trading_days_in_year()*self._table["Daily Returns"].var())
+        return numpy.sqrt(furnace.data.fcalendar.trading_days_in_year()*self._table["Daily Returns"].var())
 
     def growth_by(self, date):
-        """ Returns growth by a date as a percent scaled against 100% on beginning date of this performance """
+        """ Returns growth by a date as a percent on beginning date of this performance """
         if date == self.begin():
-            return 1.0
+            return 0.0
         return self._table["Cumulative Returns"][date]
 
     def plot_index(self, index_base):
         """ Plots a day by day performance, with day one pegged at value of index_base, on a matplotlib chart """
 
-        indecies = self._table["Cumulative Returns"] * index_base
+        indecies = (1.0 + self._table["Cumulative Returns"]) * index_base
         return indecies.plot()
 
     def begin(self):
@@ -78,8 +75,10 @@ class OverallPerformance(object):
 
     def simple_sharpe(self):
         """ Returns a simplified sharpe ratio - cagr over volatility. """
-        return (self.cagr() - 1.0) / self.volatility()
+        return self.cagr() / self.volatility()
 
+    #TODO: add test on this.
+    #FIXME: cardinality no longer is a useful idea on the 'asset universe'.
     def number_of_trades(self):
         """ Simple turnover metric - an estimate of the number of trades we make """
         return len(self._portfolio_periods) * self._asset_universe.cardinality()
