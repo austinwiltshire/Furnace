@@ -157,3 +157,16 @@ def test_v1_baseline():
 
     assert is_close(perf.cagr(), 0.0693)
     assert is_close(perf.simple_sharpe(), 0.809)
+
+def test_real_estate():
+    """ Regression test on the real estate index IYR """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["IYR"])
+
+    strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "IYR", calendar)
+    perf = strat.performance_during(begin, end)
+
+    assert is_close(perf.cagr(), 0.0219)
+    assert is_close(perf.simple_sharpe(), 0.0575)

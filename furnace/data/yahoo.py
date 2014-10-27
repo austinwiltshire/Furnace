@@ -17,6 +17,7 @@ def load_pandas():
 
     pandas_data["SPY"] = load_symbol("data/spy.csv", "data/spy_div.csv")
     pandas_data["LQD"] = load_symbol("data/lqd.csv", "data/lqd_div.csv")
+    pandas_data["IYR"] = load_symbol("data/iyr.csv", "data/iyr_div.csv")
 
     return pandas_data
 
