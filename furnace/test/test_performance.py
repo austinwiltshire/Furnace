@@ -5,6 +5,7 @@ from furnace.data import fcalendar
 from furnace import performance, strategy
 from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth
 
+#TODO: look at making more specific names
 def test_buy_and_hold_spy_cagr():
     """ Tests a buy and hold CAGR of the SPY from 1-2-3003 to 12-31-2012
     as of aug 18, validated with adj close from yahoo

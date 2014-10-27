@@ -5,6 +5,7 @@ from datetime import datetime
 from furnace import portfolio
 from furnace.test.helpers import make_default_asset_factory, is_close
 
+#TODO: look at renaming these
 def test_all_spy_index_total_return():
     """ Tests the total return of an all SPY index between 2003-1-2 and 2012-12-31 is same as yahoo adj return
         for same period """

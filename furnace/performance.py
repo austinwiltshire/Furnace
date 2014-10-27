@@ -8,10 +8,12 @@ import furnace.data.fcalendar
 
 #NOTE: this used to be a single method on an object. Would make sense to refactor to that if we need to add more state
 #to our simulation
+#TODO: drop this and just call strategy.performance_during
 def fire_furnace(strategy, begin_date, end_date):
     """ Given a financial strategy, returns performance metrics for it """
     return strategy.performance_during(begin_date, end_date)
 
+#TODO: add object invariant that portfolio periods are always sorted. can simplify some methods after this
 class OverallPerformance(object):
     """ OverallPerformance is how a strategy does over time. """
 
@@ -40,6 +42,7 @@ class OverallPerformance(object):
         """ Returns the total return from begining to end """
         return self.growth_by(self.end())
 
+#TODO: add assertion that len(self._table.index) == number of trading days between begin and end in financial calendar
     def duration(self):
         """ Returns the length of this performance period in trading days"""
         return datetime.timedelta(len(self._table.index))

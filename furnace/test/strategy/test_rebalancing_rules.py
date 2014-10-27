@@ -7,6 +7,7 @@ from furnace.data import fcalendar
 from furnace import performance, strategy
 from furnace.test.helpers import make_default_asset_factory, is_close
 
+#TODO: look at making more specific names
 def test_period_ends():
     """ Test that returns line up across period ends and beginnings with expectations """
     begin = datetime(2003, 1, 2)

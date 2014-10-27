@@ -7,6 +7,7 @@ from furnace.data import fcalendar
 from furnace import performance, strategy
 from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth
 
+#TODO: look at making more specific names
 def test_bh_stocks_and_bonds_cagr():
     """ Tests buy and hold of two assets, spy and lqd, cagr metric from 2003-1-2 to 2012-12-31
 

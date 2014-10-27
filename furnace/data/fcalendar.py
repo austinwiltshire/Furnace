@@ -9,6 +9,7 @@ from datetime import datetime
 from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
 import bisect
 from pandas import Series
+import numpy
 
 def trading_days_in_year():
     """ Constant number of trading days in a year. We use a somewhat standard 252 """
@@ -19,8 +20,12 @@ class FCalendar(object):
     def __init__(self, dates):
         self._dates = dates
 
+#TODO: should not expose iter method. Should also figure out how to index and slice a pandas time series by date
     def __iter__(self):
         return iter(self._dates)
+
+    def __contains__(self, value):
+        return numpy.datetime64(value) in self._dates.values
 
     def nth_trading_day_after(self, nth, a_date):
         """ Finds the nth trading day after aDate.  Takes into account holidays and weekends. """
