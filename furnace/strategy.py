@@ -10,6 +10,8 @@ from dateutil.rrule import rrule, YEARLY
 import datetime
 import abc
 import furnace.data.fcalendar
+import furnace.data.yahoo
+import furnace.data.asset
 
 class TradingPeriod(object):
     """ The begining and end of an entire trading period on which metrics can be collected """
@@ -239,3 +241,16 @@ def buy_and_hold_bonds(asset_universe, begin_date, end_date, fcalendar):
 def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date, fcalendar):
     """ Purchases 80% SPY and 20% LQD """
     return buy_and_hold_multi_asset(asset_universe, begin_date, end_date, ["SPY", "LQD"], [.8, .2], fcalendar)
+
+def v1_baseline():
+    """ Builds a strategy that is currently the best of breed as of Oct 26 2014. This is a 20% stocks, 80% bonds
+    strategy that rebalances every 25 trading days. """
+
+    begin = datetime.datetime(2003, 1, 2)
+    end = datetime.datetime(2012, 12, 31)
+    calendar = furnace.data.fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
+    data_cache = furnace.data.yahoo.load_pandas()
+    asset_factory = furnace.data.asset.AssetUniverse(["SPY", "LQD"], data_cache, calendar)
+
+    strategy = ndays_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.2, .8], 25)
+    return strategy.performance_during(begin, end)

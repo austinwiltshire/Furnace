@@ -149,3 +149,11 @@ def test_single_yearly_daily():
     test_date = datetime(2011, 12, 30)
 
     assert is_close(rebalanced_perf.growth_by(test_date), buy_and_hold_perf.growth_by(test_date))
+
+def test_v1_baseline():
+    """ Test the october 26 2014 strategy regression style """
+
+    perf = strategy.v1_baseline()
+
+    assert is_close(perf.cagr(), 0.0693)
+    assert is_close(perf.simple_sharpe(), 0.809)
