@@ -46,6 +46,19 @@ class StaticTarget(PortfolioOptimizer):
         return self._target
 #pylint: enable=R0903
 
+class ProportionalWeighting(PortfolioOptimizer):
+    """ Optimizes portfolio by assigning proportionally larger weights to members that offer greater simple sharpe
+    ratios based on total asset history """
+    def __init__(self, symbols):
+        self._symbols = symbols
+
+    def optimize(self, _, asset_universe):
+        """ Ignore forecaster for now. """
+        assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
+        sharpes = pandas.Series(asset.simple_sharpe() for asset in assets)
+        weights = sharpes / sharpes.sum()
+        return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
+
 # pylint: disable=R0903
 class Weightings(object):
     """ Represents multiple asset weights that add up to 1.0 """
@@ -57,6 +70,14 @@ class Weightings(object):
     def __iter__(self):
         """ Iterate over the weights """
         return iter(self._weightings)
+
+    def __eq__(self, other):
+        """ Checks for equality """
+        zipped_weights = zip(self._weightings, other._weightings) #pylint: disable=W0212
+        return all(weight1 == weight2 for weight1, weight2 in zipped_weights)
+
+    def __repr__(self):
+        return str(self._weightings)
 
     def make_index_on(self, date):
         """ Creates an index of these weightings on date """
@@ -86,6 +107,12 @@ class Weighting(object):
     def make_partial_index(self, date):
         """ Creates an index who's basis is weighted initially """
         return self.asset().make_index(date, self.weight())
+
+    def __eq__(self, other):
+        return numpy.isclose(self.weight(), other.weight(), 3) and self.asset() == other.asset()
+
+    def __repr__(self):
+        return "<Weighting: " + str(self.asset()) + " at " + str(self.weight()) + "%>"
 
 # pylint: disable=R0903
 #NOTE: too few public methods

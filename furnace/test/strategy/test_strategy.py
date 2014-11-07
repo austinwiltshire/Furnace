@@ -4,7 +4,7 @@ Tests strategies
 
 from datetime import datetime
 from furnace.data import fcalendar
-from furnace import performance, strategy
+from furnace import performance, strategy, portfolio, weathermen
 from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth
 
 #TODO: look at making more specific names
@@ -170,3 +170,27 @@ def test_real_estate():
 
     assert is_close(perf.cagr(), 0.0219)
     assert is_close(perf.simple_sharpe(), 0.0575)
+
+def test_proportional_portfolio():
+    """ Regression test of the proportional portfolio strategy with full history forecasts
+
+    This strategy nets cagr of 0.0699 and SS of 0.7606, .0006 better and .0484 worse than current baseline
+    respectively. It has the benefit of being based on a heuristic rather than a grid search of history.
+    It has the drawback of still having clairvoyant bias (uses future data to predict the past).
+    """
+    begin = datetime(2003, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+
+    strat = strategy.Strategy(
+        portfolio.ProportionalWeighting(["SPY", "LQD"]),
+        asset_factory,
+        strategy.NDayRebalance(calendar, 25),
+        weathermen.NullForecaster() #TODO: 1.1 need to replace with full history forecast
+    )
+
+    perf = strat.performance_during(begin, end)
+
+    assert is_close(perf.cagr(), 0.0699)
+    assert is_close(perf.simple_sharpe(), 0.7606)

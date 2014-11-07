@@ -4,6 +4,8 @@
 from datetime import datetime
 from furnace import portfolio
 from furnace.test.helpers import make_default_asset_factory, is_close
+from furnace.data import fcalendar
+from furnace import weathermen
 
 #TODO: look at renaming these
 def test_all_spy_index_total_return():
@@ -63,3 +65,19 @@ def test_spy_lqd_mix_index_ttl_rtn():
                                  datetime(2003, 1, 2))
 
     assert is_close(index.total_return_by(datetime(2012, 12, 31)), .900)
+
+def test_proportional_weighting():
+    """ Test the proportional weighting portfolio optimization strategy. Weights based on forecasts' idea of simple
+    sharpe proportionally """
+    asset_factory = make_default_asset_factory(["SPY", "LQD"])
+
+    portfolio_opt = portfolio.ProportionalWeighting(["SPY", "LQD"])
+    weightings = portfolio_opt.optimize(weathermen.NullForecaster(), asset_factory)
+
+    spy = asset_factory.make_asset("SPY")
+    lqd = asset_factory.make_asset("LQD")
+
+    #these weightings were hand calculated on october 29
+    optimal_weightings = portfolio.Weightings([portfolio.Weighting(spy, .302), portfolio.Weighting(lqd, .698)])
+
+    assert optimal_weightings == weightings

@@ -2,15 +2,18 @@ FEATURES:
 
 * Critical Path:
 ** Imminent (Version 2):
-*** 1. add helper function for current baseline - 20% stocks or whever i decided on. that way i can easily compare new strategies cagr/simple sharpe
-*** 2. Add real estate index ( go for history) (compare to baseline)
-*** 3. Add currency index and/or money market (compare to new baseline)
-*** 4. Add commodities index (compare to new baseline)
-*** 5. Create last period (momentum) forecast of CAGR
-*** 6. Create last period forecast of volatility
-*** 7. Create portfolio that weights based on proportional simplified sharpes (no correlation) (compare spy & bonds to baseline, then add new assets to reconfirm)
+*** 2. Create portfolio that weights based on proportional simplified sharpes (no correlation) (compare spy & bonds to baseline, then add new assets to reconfirm)
+*** 2.1 Use total period cagr and simple sharpe for now.
+*** 3. Add real estate index ( go for history) (compare to baseline)
+*** 4. Add currency index and/or money market (compare to new baseline)
+*** 5. Add commodities index (compare to new baseline)
+*** 6. Create last period (momentum) forecast of CAGR
+*** 7. Create last period forecast of volatility
 *** 8. Create auto regression forecast of CAGR (compare to simple momentum)
 *** 9. Tag as version 2!
+
+DONE:
+*** 1. add helper function for current baseline - 20% stocks or whever i decided on. that way i can easily compare new strategies cagr/simple sharpe
 
 ** Anticipated:
 *** add max drawdown to performance
@@ -43,6 +46,8 @@ PRODUCTIVITY:
 BUGS:
 
 REFACTORS:
+
+Refactor 'performance' object to take any pandas array and provide CAGR, simple_sharpe and volatility methods that run on that array. Will probably have to redo how period performances are done such that performances can be appended together so long as there are no overlaps in dates?
 
 * General
 ** add doctests to public methods
@@ -120,6 +125,9 @@ divide by adjusted lines
 * in ipython:
 ** ctrl-a moves to begin of line
 ** ctrl-e moves to end of line
+
+* to get rid of protected member warning in pylint
+#pylint: disable=W0212
 
 * libs learned:
 ** pandas
