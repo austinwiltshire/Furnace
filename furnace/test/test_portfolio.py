@@ -72,7 +72,7 @@ def test_proportional_weighting():
     asset_factory = make_default_asset_factory(["SPY", "LQD"])
 
     portfolio_opt = portfolio.ProportionalWeighting(["SPY", "LQD"])
-    weightings = portfolio_opt.optimize(weathermen.NullForecaster(), asset_factory)
+    weightings = portfolio_opt.optimize(weathermen.HistoricalAverageForecast(asset_factory), asset_factory)
 
     spy = asset_factory.make_asset("SPY")
     lqd = asset_factory.make_asset("LQD")

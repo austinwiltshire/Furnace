@@ -27,8 +27,8 @@ class Forecast(object):
         self._asset_universe = asset_universe
 
     @abc.abstractmethod
-    def growth(self, symbol):
-        """ Getter for growth """
+    def simple_sharpe(self, asset):
+        """ Getter for the simple sharpe """
         pass
 #pylint: enable=R0922,R0903
 
@@ -38,13 +38,13 @@ class Forecast(object):
 class NullForecast(Forecast):
     """ Simply returns some default value for all symbols """
 
-    def __init__(self, asset_universe, growth):
+    def __init__(self, asset_universe, simple_sharpe):
         super(NullForecast, self).__init__(asset_universe)
-        self._growth = growth
+        self._simple_sharpe = simple_sharpe
 
-    def growth(self, symbol):
+    def simple_sharpe(self, _):
         """ Returns a default growth value """
-        return self._growth
+        return self._simple_sharpe
 #pylint: enable=R0903
 
 #NOTE: expected that this interface will grow
@@ -57,4 +57,26 @@ class NullForecaster(Weatherman):
     def forecast(self, asset_universe, time_point, period):
         """ Returns nothing but a 0% change """
         return NullForecast(asset_universe, 1.0)
+#pylint: enable=R0903
+
+#NOTE: expected that this interface will grow
+#pylint: disable=R0903
+class HistoricalAverageForecast(Forecast):
+    """ Forecast simply returns the historical average of any asset """
+
+    def __init__(self, asset_factory):
+        super(HistoricalAverageForecast, self).__init__(asset_factory)
+
+    def simple_sharpe(self, asset):
+        return asset.simple_sharpe()
+#pylint: enable=R0903
+
+#NOTE: expected that this interface will grow
+#pylint: disable=R0903
+class HistoricalAverage(Weatherman):
+    """ Returns the historical stats for any particular asset """
+
+    def forecast(self, asset_universe, time_point, period):
+        """ Returns a historical based forecast """
+        return HistoricalAverageForecast(asset_universe)
 #pylint: enable=R0903

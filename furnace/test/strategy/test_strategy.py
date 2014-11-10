@@ -187,7 +187,7 @@ def test_proportional_portfolio():
         portfolio.ProportionalWeighting(["SPY", "LQD"]),
         asset_factory,
         strategy.NDayRebalance(calendar, 25),
-        weathermen.NullForecaster() #TODO: 1.1 need to replace with full history forecast
+        weathermen.HistoricalAverage() #TODO: 1.1 need to replace with full history forecast
     )
 
     perf = strat.performance_during(begin, end)
