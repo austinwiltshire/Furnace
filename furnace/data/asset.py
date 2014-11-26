@@ -6,6 +6,15 @@
 from furnace.data import fcalendar
 import numpy
 
+def growth(begin, end):
+    """ Calculates the percent growth between two values """
+    return (end - begin) / begin
+
+def annualized(growth, days_represented):
+    """ Returns the annualized growth or CAGR of growth if growth takes place over 
+    days represented """
+    return pow(1.0 + growth, 1.0 / (days_represented / fcalendar.trading_days_in_year())) - 1.0
+
 #TODO: this is more of an asset factory. An asset universe is a separate set of assets and probably needs
 #to be it's own object.
 class AssetUniverse(object):
@@ -63,15 +72,27 @@ class Asset(object):
 
         return table['Adjusted Close'] * initial_basis
 
+#TODO 1.1 needs testing
+    def between(self, begin, end):
+        """ Returns this asset's performance but restricted between begin and end dates
+        inclusively of both """
+        restricted_table = self._table[self._table.index <= end]
+        restricted_table = restricted_table[restricted_table.index >= begin]
+        return Asset(self._symbol, restricted_table, self._calendar)
+
+    #TODO 1.1 add to some sort of helper class rather than reimplementing everywhere
+    #TODO 1.1 test
+    def total_return(self):
+        """ The total return of this asset if held from the first date to the last date """
+        begin = self._table["Adjusted Close"].ix[0]
+        end = self._table["Adjusted Close"].ix[-1]
+        return growth(begin, end)
+
 #TODO: hand test this for spy
     #TODO 1.1 this should take in a begin/end period
     def cagr(self):
         """ The compound adjusted geometric return of this asset if held from the first date to the last date """
-        begin = self._table["Adjusted Close"].ix[0]
-        end = self._table["Adjusted Close"].ix[-1]
-        total_return = (end - begin) / begin
-        days_available = len(self._table)
-        return pow(1.0 + total_return, 1.0 / (days_available / fcalendar.trading_days_in_year())) - 1.0
+        return annualized(self.total_return(), len(self._table))
 
 #TODO: hand test this for spy
     #TODO 1.1 this should take in a begin/end period

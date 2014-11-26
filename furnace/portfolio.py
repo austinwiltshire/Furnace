@@ -56,7 +56,6 @@ class ProportionalWeighting(PortfolioOptimizer):
         """ Ignore forecaster for now. """
         assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
         sharpes = pandas.Series(forecast.simple_sharpe(asset) for asset in assets)
-#        sharpes = pandas.Series(asset.simple_sharpe() for asset in assets)
         weights = sharpes / sharpes.sum()
         return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
 

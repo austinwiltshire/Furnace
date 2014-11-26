@@ -80,3 +80,49 @@ class HistoricalAverage(Weatherman):
         """ Returns a historical based forecast """
         return HistoricalAverageForecast(asset_universe)
 #pylint: enable=R0903
+
+#NOTE: expected that this interface will grow
+#pylint: disable=R0903
+class PeriodAverage(Weatherman):
+    """ Returns the period stats for any particular asset """
+
+    def __init__(self, calendar):
+        self._calendar = calendar
+
+    def forecast(self, asset_universe, time_point, period):
+        """ Returns a historical based forecast """
+        return PeriodAverageForecast(asset_universe, time_point, period, self._calendar)
+#pylint: enable=R0903
+
+#NOTE: expected that this interface will grow
+#pylint: disable=R0903
+class PeriodAverageForecast(Forecast):
+    """ Forecast that uses last period's average of any asset.
+    
+    We forecast from period's trading days ago to today, for a total of period + 1 days
+    of *value* to consider, but period days of performance since performance is judged
+    off of pct_changes """
+
+    def __init__(self, asset_factory, time_point, period, calendar):
+        super(PeriodAverageForecast, self).__init__(asset_factory)
+        assert time_point in calendar
+        self._time_point = time_point
+        self._period = period
+        self._calendar = calendar
+
+    def simple_sharpe(self, asset):
+        """ Returns a period average based forecast """
+        begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
+        end = self._time_point
+
+
+        return asset.between(begin, end).simple_sharpe()
+
+    def cagr(self, asset):
+        """ Returns a period average based forecast of growth"""
+        begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
+        end = self._time_point
+        return asset.between(begin, end).cagr()
+
+#pylint: enable=R0903
+

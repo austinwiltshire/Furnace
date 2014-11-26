@@ -88,7 +88,8 @@ class OverallPerformance(object):
 
 def make_period_performance(begin_date, end_date, index):
     """ Factory for a period performance object """
-    #NOTE: due to how pct_change works, we're inclusive of the end date, but exclusive of the starting date.
+    #NOTE: due to pct diff taking N points and returning N-1 points, a period perfomance
+    #of returns is inclusive of the end date but exclusive of the begin date
 
     begin = begin_date
 
@@ -102,7 +103,8 @@ def make_period_performance(begin_date, end_date, index):
 class PeriodPerformance(object):
     """ How a strategy does over it's trading period. A period performance is exclusive of it's begin
     date and inclusive of it's end date. In other words, if we had a period performance that started
-    today, the soonest we'd have data available is tomorrow since today is our 'buy' point """
+    today, the soonest we'd have data available is tomorrow since today is our 'buy' point 
+    Our performance today, for example, is always 0%. """
 
     def __init__(self, begin_date, end_date, table):
         self._begin_date = begin_date

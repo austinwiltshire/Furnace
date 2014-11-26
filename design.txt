@@ -45,9 +45,16 @@ PRODUCTIVITY:
 
 BUGS:
 
+* NDay rebalancing strategies are actually one day off, or they are correct and just need to be properly documented. 25 day strategy is actually 25 trading days before or after *today*, but the strategy is always inclusive of *today*, so it really is a series of 26 points.
+
 REFACTORS:
 
 Refactor 'performance' object to take any pandas array and provide CAGR, simple_sharpe and volatility methods that run on that array. Will probably have to redo how period performances are done such that performances can be appended together so long as there are no overlaps in dates?
+This refactor can also apply to weathermen - they just need to provide growth and volatility forecasts, simple_sharpe is a metric that combines those that they need to know nothing about.
+
+financial calendar should support time points that themselves can refer back to the financial calendar. for instance, if i had one of it's time points, i should be able to do something like timepoint - 25, and work 25 *financial calendar days* back. right now i have to pass in the period, the time point, and the financial calendar. i'd really like to get to the point where even period can be reasoned about without time point and financial calendar (period should know it's time point). i should be able to take in a period and get the next or previous period (or 5 periods away, like period + 5)
+
+period logic is a little wonky. Can review pandas for periods. Could also make trading periods smart and find the next or previous periods themselves. Right now, a 'yearly' rebalancing rate should define whether it means ~252 trading days ago, or the closest trading date to this calendar date (define closest?). Doing math in trading dates is just easier and would be a good way to limit scope.
 
 * General
 ** add doctests to public methods
@@ -70,6 +77,12 @@ Refactor 'performance' object to take any pandas array and provide CAGR, simple_
 ARCHITECTURE:
 
 * all returns are calculated as 0.01 for 1% return. A stock that is valued at $100 that has a 1% return will be valued at $101
+
+* Trading periods are inclusive of both their begins and ends. Forecasts also assume this behavior. A forecast of 25 trading days ago implies a forecast of performance from 25 trading days ago until today. The reason that the ranges are inclusive of both sides is multifold:
+** First, it agrees with intuition. During actual trading, I will sell assets and then buy others all on the same day. The price I sell assets at will be the price the older position ends on, whereas the price I buy new assets on will be the price I begin the new position on.
+** Secondly, it makes the pct_diff functions on series easy to use. Values for the entire portfolio agree on the day one position sells and the other buys, giving a consistent value for that day with no gaps in trading. Doing a pct difference on the series gives me a total return of multiple periods glued together. The alternative leaves a one day gap where the value doesn't change but the actual value of the assets being traded does.
+To recap, a trading period *buys* on day 0, and *sells* on day N. For example, a one day rebalancing rate would buy today and sell the next day.
+
 NOTES:
 
 * to drop into ipython:
