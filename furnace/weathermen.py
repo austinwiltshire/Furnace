@@ -115,7 +115,7 @@ class PeriodAverageForecast(Forecast):
         begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
         end = self._time_point
 
-
+#TODO: assert that asset supports begin and end dates
         return asset.between(begin, end).simple_sharpe()
 
     def cagr(self, asset):

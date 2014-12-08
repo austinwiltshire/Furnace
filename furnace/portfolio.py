@@ -48,15 +48,34 @@ class StaticTarget(PortfolioOptimizer):
 
 class ProportionalWeighting(PortfolioOptimizer):
     """ Optimizes portfolio by assigning proportionally larger weights to members that offer greater simple sharpe
-    ratios based on total asset history """
+    ratios based on total asset history
+    
+    This portfolio does not support short positions and simply exits any potential negative sharpe ratio 
+    positions. If all forecasts are negative, it holds an equal weight portfolio """
     def __init__(self, symbols):
         self._symbols = symbols
 
     def optimize(self, forecast, asset_universe):
         """ Ignore forecaster for now. """
         assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
-        sharpes = pandas.Series(forecast.simple_sharpe(asset) for asset in assets)
-        weights = sharpes / sharpes.sum()
+        sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in assets])
+
+        #NOTE: we fallback to an equal weight proportion in the case that all sharpe ratios are negative
+        weights = sharpes / sharpes.sum() if sharpes.sum() > 0.0 else numpy.ones(len(assets)) / len(assets)
+        return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
+
+class AntiProportionalWeighting(PortfolioOptimizer):
+    """ Assigns the opposite proportions of above, a heuristic reversion to the mean strategy for use with simple
+    momentum based forecasts """
+    def __init__(self, symbols):
+        self._symbols = symbols
+
+    def optimize(self, forecast, asset_universe):
+        assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
+        sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in assets])
+
+        #NOTE: we fallback to an equal weight proportion in the case that all sharpe ratios are negative
+        weights = (1.0 - (sharpes / sharpes.sum())) / (len(assets) - 1.0) if sharpes.sum() > 0.0 else numpy.ones(len(assets)) / len(assets)
         return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
 
 # pylint: disable=R0903

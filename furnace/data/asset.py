@@ -11,7 +11,7 @@ def growth(begin, end):
     return (end - begin) / begin
 
 def annualized(growth, days_represented):
-    """ Returns the annualized growth or CAGR of growth if growth takes place over 
+    """ Returns the annualized growth or CAGR of growth if growth takes place over
     days represented """
     return pow(1.0 + growth, 1.0 / (days_represented / fcalendar.trading_days_in_year())) - 1.0
 
@@ -50,17 +50,24 @@ class Asset(object):
     """ Represents a tradable security, by symbol, over a period of time """
     #TODO: add complex initialization to factory function
     def __init__(self, symbol, data_cache, calendar):
+
+
         self._symbol = symbol
         self._table = data_cache
         self._calendar = calendar
         self._table["Yield"] = self._table['Dividends'] / self._table['Close']
         accumulated_yield = (self._table["Yield"] + 1.0).dropna().cumprod()
 
+        #pull all splits forward in time, and fill any remaining nulls with 1
+        self._table["Split Adjustment"] = self._table["SplitRatio"].fillna(method='ffill').fillna(1)
+
         #note: we assume dividends are reinvested on the day of
         self._table["Basis Adjustment"] = accumulated_yield.reindex(self._table.index,
                                                                          method='ffill',
                                                                          fill_value=1.0)
-        self._table["Adjusted Close"] = self._table["Close"] * self._table["Basis Adjustment"]
+        self._table["Adjusted Close"] = (self._table["Close"] *
+                                         self._table["Basis Adjustment"] *
+                                         self._table["Split Adjustment"])
 
     #NOTE: this function is slow, especially in rapidly readjusted strategies
     #TODO: why not set an end to the index? a lot of the index values are thrown away for fast changing dates

@@ -168,8 +168,48 @@ def test_real_estate():
     strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "IYR", calendar)
     perf = strat.performance_during(begin, end)
 
-    assert is_close(perf.cagr(), 0.0219)
-    assert is_close(perf.simple_sharpe(), 0.0575)
+    assert is_close(perf.cagr(), 0.0954)
+    assert is_close(perf.simple_sharpe(), 0.2748)
+
+def test_money_market():
+    """ Regression test on the money market index SHV """
+    begin = datetime(2007, 1, 11)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SHV"])
+
+    strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SHV", calendar)
+    perf = strat.performance_during(begin, end)
+
+    assert is_close(perf.cagr(), 0.0136)
+    assert is_close(perf.simple_sharpe(), 2.7199)
+
+#TODO: 1.1 pull out repeated 'perfomance_test' function that takes in dates, symbol cagr and sharpe and does the below
+#functionality
+#TODO: 1.1 refactor to just test the asset's own cagr and simple sharpe rather than the buy and hold portfolio logic
+#TODO: 1.1 move this to test_asset
+def test_bull_dollar():
+    """ Regression test on the bullish dollar index UUP """
+    begin = datetime(2007, 3, 1)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["UUP"])
+
+    strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "UUP", calendar)
+    perf = strat.performance_during(begin, end)
+
+    assert is_close(perf.cagr(), -0.0204)
+    assert is_close(perf.simple_sharpe(), -0.2034)
+
+def test_commodities():
+    """ Regression test on the commodities tracking index GSG """
+    begin = datetime(2006, 7, 21)
+    end = datetime(2012, 12, 31)
+    asset_factory = make_default_asset_factory(["GSG"])
+    gsg = asset_factory.make_asset("GSG")
+
+    assert is_close(gsg.between(begin, end).total_return(), -.3342)
+    assert is_close(gsg.between(begin, end).volatility(), .2755)
 
 def test_proportional_portfolio():
     """ Regression test of the proportional portfolio strategy with full history forecasts
@@ -187,10 +227,79 @@ def test_proportional_portfolio():
         portfolio.ProportionalWeighting(["SPY", "LQD"]),
         asset_factory,
         strategy.NDayRebalance(calendar, 25),
-        weathermen.HistoricalAverage() #TODO: 1.1 need to replace with full history forecast
+        weathermen.HistoricalAverage()
     )
 
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), 0.0699)
     assert is_close(perf.simple_sharpe(), 0.7606)
+
+def test_period_average_w_reit():
+    """ This is a regression test of using the 1 month momentum based forecaster. It *underperforms* both in cagr and
+    simple sharpe the full history. I have hacked in place an anti-momentum one month rebalancing rule, and that ends
+    up outperforming a 3 asset historical rebalance. The 2 asset anti-momentum still underperforms, though. This
+    approach has the benefit of no clairvoyance, but at significant cost to simple sharpe. Additionally, this approach
+    shows that adding real estate to our portfolio does, in fact, make our returns and simple sharpes worse against what
+    financial theory of diversification might say but in favor of intuition given the bumpy ride real estate had during
+    this period """
+
+    begin = datetime(2004, 1, 2)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR"])
+
+    strat = strategy.Strategy(
+        portfolio.ProportionalWeighting(["SPY", "LQD", "IYR"]),
+        asset_factory,
+        strategy.NDayRebalance(calendar, 25),
+        weathermen.PeriodAverage(calendar)
+    )
+
+    perf = strat.performance_during(begin, end)
+
+    assert is_close(perf.cagr(), 0.0585)
+    assert is_close(perf.simple_sharpe(), .33762)
+
+
+def test_currency_momentum():
+    """ UUP, a bullish dollar currency etf, does surprisingly well with momentum whereas stocks tend to have a negative
+    monthly autocorrelation. This is purely a regression test """
+    begin = datetime(2007, 3, 1)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
+
+    strat = strategy.Strategy(
+        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
+        asset_factory,
+        strategy.NDayRebalance(calendar, 25),
+        weathermen.PeriodAverage(calendar)
+    )
+
+    perf = strat.performance_during(begin, end)
+
+    assert is_close(perf.cagr(), 0.0858)
+    assert is_close(perf.simple_sharpe(), .759)
+
+def test_v1_mom():
+
+    begin = datetime(2007, 3, 1)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
+
+    strat1 = strategy.ndays_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.2, .8], 25)
+    perf1 = strat1.performance_during(begin, end)
+
+    strat2 = strategy.Strategy(
+        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
+        asset_factory,
+        strategy.NDayRebalance(calendar, 25),
+        weathermen.PeriodAverage(calendar)
+    )
+
+    perf2 = strat2.performance_during(begin, end)
+
+    import IPython
+    IPython.embed()
