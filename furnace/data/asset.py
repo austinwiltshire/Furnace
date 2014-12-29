@@ -123,4 +123,14 @@ class Asset(object):
     def __eq__(self, other):
         return self._symbol == other #pylint: disable=W0212
 
+    def __hash__(self):
+        #TODO: currently this object conflates the abstract idea of an asset symbol as well as a set amount
+        #of asset + date data. the hash only reflects the symbol itself, meaning that two assets with the
+        #same symbol but one using different dates (using the 'between' helper) would conflict in the same
+        #hash table
+        return hash(self._symbol)
+
+    def __repr__(self):
+        return "Asset with Symbol: {1}".format([self._symbol])
+
 

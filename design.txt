@@ -54,6 +54,7 @@ this is done insofar as i know?
 *** Add real portfolio optimization with correlations
 *** calculate true sharpe by adjusting returns and volatility by returns and volatility of the risk free asset
 *** ./furnace/strategy.py:64: #TODO: should forecast be similar to asset universe, except it also provides expectations on those assets?
+*** add volatility model
 
 * Bells and Whistles
 ** add in metadata to allow for readable debugging and plots? i..e, be nice if the plot auto-named it as "Total return of Buy-And-Hold Single Asset with historical forecast on SPY"
@@ -92,6 +93,10 @@ period logic is a little wonky. Can review pandas for periods. Could also make t
 add checks on asset classes grabbing dates that the class supports that date. the assets only have so much historical information available to them and i end up going past it on accident a lot. it takes me awhile to realize what's going on, more informative error messages would be helpful
 
 i need some sort of auditing checks rathe rthan just the total return, i need value of assets in the portfolio on a day by day basis for debugging and auditing purposes
+
+redo naming scheme of columns on tables to snake_case, this allows direct access that looks pythonic
+
+split weatherman into cagr and volatility models
 
 * General
 ** add doctests to public methods

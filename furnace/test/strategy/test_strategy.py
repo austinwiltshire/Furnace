@@ -284,13 +284,53 @@ def test_currency_momentum():
 
 def test_v1_mom():
 
-    begin = datetime(2007, 3, 1)
+    begin = datetime(2009, 3, 2)
     end = datetime(2012, 12, 31)
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
 
-    strat1 = strategy.ndays_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.2, .8], 25)
-    perf1 = strat1.performance_during(begin, end)
+    strat = strategy.Strategy(
+        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
+        asset_factory,
+        strategy.NDayRebalance(calendar, 25),
+        weathermen.PeriodAverage(calendar)
+    )
+
+    perf = strat.performance_during(begin, end)
+
+#    assert is_close(perf.cagr() 0.0)
+#    assert is_close(perf.simple_sharpe(), 0.0)
+
+def test_simple_linear_specific():
+    """ UUP, LQD and SPY all using a simple linear regression per asset.
+    Regression test"""
+
+    begin = datetime(2007, 6, 4)
+    end = datetime(2012, 12, 31)
+    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
+
+    spy = asset_factory.make_asset("SPY")
+    lqd = asset_factory.make_asset("LQD")
+    uup = asset_factory.make_asset("UUP")
+
+    spy_weatherman = weathermen.SimpleLinear(calendar, spy)
+
+    #The simple linear forecaster is actually really bad for lqd
+    lqd_weatherman = weathermen.SimpleLinear(calendar, lqd)
+    uup_weatherman = weathermen.SimpleLinear(calendar, uup)
+
+    forecasts_dictionary = {spy: spy_weatherman, lqd: lqd_weatherman, uup: uup_weatherman}
+    test_weatherman = weathermen.AssetSpecific(forecasts_dictionary)
+
+    strat = strategy.Strategy(
+        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
+        asset_factory,
+        strategy.NDayRebalance(calendar, 25),
+        test_weatherman
+    )
+
+    perf = strat.performance_during(begin, end)
 
     strat2 = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
@@ -303,3 +343,6 @@ def test_v1_mom():
 
     import IPython
     IPython.embed()
+
+    assert is_close(perf.cagr(), 0.01222)
+    assert is_close(perf.simple_sharpe(), 0.10083)
