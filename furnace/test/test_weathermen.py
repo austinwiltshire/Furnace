@@ -33,7 +33,7 @@ def test_simple_autocorr():
     test_weatherman = weathermen.SimpleLinear(calendar, spy)
     forecast = test_weatherman.forecast(asset_factory, time_point, period)
 
-    assert is_close(forecast.cagr(spy), 0.01562)
+    assert is_close(forecast.cagr(spy), 0.0958)
 
 def test_asset_specific():
     """ Tests the combination of asset forecasts using the AssetSpecific weatherman
@@ -57,7 +57,7 @@ def test_asset_specific():
     test_weatherman = weathermen.AssetSpecific(forecasts_dictionary)
     forecast = test_weatherman.forecast(asset_factory, time_point, period)
 
-    assert is_close(forecast.cagr(spy), 0.01562)
-    assert is_close(forecast.cagr(lqd), 0.00692)
-    assert is_close(forecast.cagr(uup), 0.00412)
+    assert is_close(forecast.cagr(spy), 0.09580)
+    assert is_close(forecast.cagr(lqd), 0.07035)
+    assert is_close(forecast.cagr(uup), 0.00251)
 

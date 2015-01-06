@@ -15,6 +15,14 @@ def annualized(growth, days_represented):
     days represented """
     return pow(1.0 + growth, 1.0 / (days_represented / fcalendar.trading_days_in_year())) - 1.0
 
+def adjust_period(rate, original_period, new_period):
+    """ Adjusts the rate given in to be the same rate over the new period. For example, adjusting
+    annualized rates to daily rates would be adjust_period(rate, 252, 1). Rates are in % from 0 and
+    periods are in trading days """
+
+    daily_rate = pow(1.0 + rate, 1.0 / original_period) - 1.0
+    return pow(daily_rate + 1.0, new_period) - 1.0
+
 #TODO: this is more of an asset factory. An asset universe is a separate set of assets and probably needs
 #to be it's own object.
 class AssetUniverse(object):

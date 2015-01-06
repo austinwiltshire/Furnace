@@ -6,6 +6,14 @@ from datetime import datetime
 from furnace.data import fcalendar
 from furnace import performance, strategy, portfolio, weathermen
 from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth
+import matplotlib
+
+def compare(perf1, perf2):
+    perf1.plot_index(100.0)
+    perf2.plot_index(100.0)
+    print perf1.cagr(), " ", perf1.simple_sharpe()
+    print perf2.cagr(), " ", perf2.simple_sharpe()
+    matplotlib.pyplot.show()
 
 #TODO: look at making more specific names
 def test_bh_stocks_and_bonds_cagr():
@@ -298,8 +306,8 @@ def test_v1_mom():
 
     perf = strat.performance_during(begin, end)
 
-#    assert is_close(perf.cagr() 0.0)
-#    assert is_close(perf.simple_sharpe(), 0.0)
+    assert is_close(perf.cagr(), 0.098)
+    assert is_close(perf.simple_sharpe(), 0.925)
 
 def test_simple_linear_specific():
     """ UUP, LQD and SPY all using a simple linear regression per asset.
@@ -308,7 +316,7 @@ def test_simple_linear_specific():
     begin = datetime(2007, 6, 4)
     end = datetime(2012, 12, 31)
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
+    asset_factory = make_default_asset_factory(["SPY", "LQD", "UUP"])
 
     spy = asset_factory.make_asset("SPY")
     lqd = asset_factory.make_asset("LQD")
@@ -316,8 +324,8 @@ def test_simple_linear_specific():
 
     spy_weatherman = weathermen.SimpleLinear(calendar, spy)
 
-    #The simple linear forecaster is actually really bad for lqd
-    lqd_weatherman = weathermen.SimpleLinear(calendar, lqd)
+    #The simple linear forecaster is actually really bad for lqd, so we use historical
+    lqd_weatherman = weathermen.HistoricalAverage()
     uup_weatherman = weathermen.SimpleLinear(calendar, uup)
 
     forecasts_dictionary = {spy: spy_weatherman, lqd: lqd_weatherman, uup: uup_weatherman}
@@ -332,17 +340,5 @@ def test_simple_linear_specific():
 
     perf = strat.performance_during(begin, end)
 
-    strat2 = strategy.Strategy(
-        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        asset_factory,
-        strategy.NDayRebalance(calendar, 25),
-        weathermen.PeriodAverage(calendar)
-    )
-
-    perf2 = strat2.performance_during(begin, end)
-
-    import IPython
-    IPython.embed()
-
-    assert is_close(perf.cagr(), 0.01222)
-    assert is_close(perf.simple_sharpe(), 0.10083)
+    assert is_close(perf.cagr(), 0.0542)
+    assert is_close(perf.simple_sharpe(), 0.486)

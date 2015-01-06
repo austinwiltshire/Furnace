@@ -3,6 +3,7 @@
 import abc
 import pandas as pd
 import statsmodels.api as sm
+from furnace.data.asset import annualized
 
 #NOTE: expected that this interface will grow and more people will inherit
 #pylint: disable=R0903
@@ -156,7 +157,8 @@ class SimpleLinearForecast(Forecast):
         """ Returns a period average based forecast of growth"""
         begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
         end = self._time_point
-        return self._model.predict([1.0, asset.between(begin, end).cagr()])
+        assert self._calendar.trading_days_between(begin, end) == 25
+        return annualized(self._model.predict([1.0, asset.between(begin, end).total_return()]), 25)
 
 class SimpleLinear(Weatherman):
     """ Returns the stats of a particular asset via a simple linear regression of 
@@ -164,14 +166,11 @@ class SimpleLinear(Weatherman):
 
     def __init__(self, calendar, asset):
         self._calendar = calendar
-        adjusted_closes_25 = asset._table["Adjusted Close"]
-        growths = adjusted_closes_25.pct_change(25)
+        adjusted_closes = asset._table["Adjusted Close"]
+        growths = adjusted_closes.pct_change(25)
         y_x = sm.add_constant(pd.concat({'growth':growths, 'growth_lag':growths.shift(25)}, axis=1).dropna())
         model = sm.OLS(y_x["growth"], y_x[["const", "growth_lag"]])
         self._model = model.fit()
-        if(asset._symbol == 'UUP'):
-            import IPython
-            IPython.embed()
 
     def forecast(self, asset_universe, time_point, period):
         """ Returns a historical based forecast """

@@ -65,8 +65,7 @@ class ProportionalWeighting(PortfolioOptimizer):
         return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
 
 class AntiProportionalWeighting(PortfolioOptimizer):
-    """ Assigns the opposite proportions of above, a heuristic reversion to the mean strategy for use with simple
-    momentum based forecasts """
+    """ A stand in for basically shorting all the forecasts I'm given """
     def __init__(self, symbols):
         self._symbols = symbols
 
@@ -75,8 +74,8 @@ class AntiProportionalWeighting(PortfolioOptimizer):
         sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in assets])
 
         #NOTE: we fallback to an equal weight proportion in the case that all sharpe ratios are negative
-        weights = (1.0 - (sharpes / sharpes.sum())) / (len(assets) - 1.0) if sharpes.sum() > 0.0 else numpy.ones(len(assets)) / len(assets)
-        return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
+        weights = sharpes / sharpes.sum() if sharpes.sum() > 0.0 else numpy.ones(len(assets)) / len(assets)
+        return Weightings([Weighting(asset, (1.0 - weight) / (len(assets) - 1)) for asset, weight in zip(assets, weights)])
 
 # pylint: disable=R0903
 class Weightings(object):

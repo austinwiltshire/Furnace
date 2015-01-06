@@ -51,6 +51,10 @@ class OverallPerformance(object):
         """ Returns the compound annual growth rate """
         return pow(1.0 + self.total_return(), 1.0 / (self.duration().days / furnace.data.fcalendar.trading_days_in_year())) - 1.0
 
+    def expected_return(self):
+        """ Returns the expected daily return """
+        return self._table["Daily Returns"].mean()
+
     def volatility(self):
         """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility

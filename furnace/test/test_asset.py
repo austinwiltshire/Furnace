@@ -6,6 +6,7 @@ Tests the asset helper class
 
 from furnace.test.helpers import make_default_asset_factory, is_close
 from datetime import datetime
+from furnace.data.asset import adjust_period, annualized
 
 def test_splits():
     """ Tests that splits are handled correctly.
@@ -19,3 +20,9 @@ def test_splits():
     iyr = asset_factory.make_asset("IYR")
 
     assert is_close(iyr.between(datetime(2005, 6, 8), datetime(2005, 6, 10)).total_return(), .000158)
+
+def test_adjust_period():
+    """ Tests that period arithmatic is correct """
+
+    assert is_close(adjust_period(0.055, 20, 252), annualized(.055, 20))
+    assert is_close(adjust_period(0.6, 20, 1), 0.02378)
