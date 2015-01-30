@@ -49,7 +49,7 @@ class Strategy(object):
         period_performances = []
         for trading_period in self.periods_during(begin_date, end_date):
             period_begin = trading_period.begin()
-            index = self.target_weighting_on(period_begin).make_index_on(period_begin)
+            index = self.target_weighting_on(period_begin).make_index_on(period_begin, trading_period.end())
             period_performances.append(performance.make_period_performance(period_begin, trading_period.end(), index))
 
         return performance.OverallPerformance(period_performances, self._asset_universe)

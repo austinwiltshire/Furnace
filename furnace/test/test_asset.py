@@ -4,7 +4,7 @@ Tests the asset helper class
 
 """
 
-from furnace.test.helpers import make_default_asset_factory, is_close
+from furnace.test.helpers import make_default_asset_factory, is_close, DEFAULT_ASSET_FACTORY
 from datetime import datetime
 from furnace.data.asset import adjust_period, annualized
 
@@ -16,10 +16,9 @@ def test_splits():
 
     """
 
-    asset_factory = make_default_asset_factory(["IYR"])
-    iyr = asset_factory.make_asset("IYR")
+    iyr = DEFAULT_ASSET_FACTORY.make_asset("IYR")
 
-    assert is_close(iyr.between(datetime(2005, 6, 8), datetime(2005, 6, 10)).total_return(), .000158)
+    assert is_close(iyr.total_return(datetime(2005, 6, 8), datetime(2005, 6, 10)), .000158)
 
 def test_adjust_period():
     """ Tests that period arithmatic is correct """

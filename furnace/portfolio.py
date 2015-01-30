@@ -54,15 +54,21 @@ class ProportionalWeighting(PortfolioOptimizer):
     positions. If all forecasts are negative, it holds an equal weight portfolio """
     def __init__(self, symbols):
         self._symbols = symbols
+        self._assets = None
+        self._num_assets = len(symbols)
 
+    #TODO: this function is very slow. unsure what to do to speed it up.
+    #TODO: clean up the caching of assets, have symbols passed in as assets
     def optimize(self, forecast, asset_universe):
         """ Ignore forecaster for now. """
-        assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
-        sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in assets])
+        if(not self._assets):
+            self._assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
+
+        sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in self._assets])
 
         #NOTE: we fallback to an equal weight proportion in the case that all sharpe ratios are negative
-        weights = sharpes / sharpes.sum() if sharpes.sum() > 0.0 else numpy.ones(len(assets)) / len(assets)
-        return Weightings([Weighting(asset, weight) for asset, weight in zip(assets, weights)])
+        weights = sharpes / sharpes.sum() if sharpes.sum() > 0.0 else numpy.ones(self._num_assets) / self._num_assets
+        return Weightings([Weighting(asset, weight) for asset, weight in zip(self._assets, weights)])
 
 class AntiProportionalWeighting(PortfolioOptimizer):
     """ A stand in for basically shorting all the forecasts I'm given """
@@ -97,11 +103,11 @@ class Weightings(object):
     def __repr__(self):
         return str(self._weightings)
 
-    def make_index_on(self, date):
+    def make_index_on(self, begin_date, end_date):
         """ Creates an index of these weightings on date """
 
-        index_value = pandas.concat([weighting.make_partial_index(date) for weighting in self._weightings], axis=1).sum(axis=1)
-        return Index(index_value, self, date)
+        index_value = pandas.concat([weighting.make_partial_index(begin_date, end_date) for weighting in self._weightings], axis=1).sum(axis=1)
+        return Index(index_value, self, begin_date)
 # pylint: enable=R0903
 
 class Weighting(object):
@@ -122,9 +128,9 @@ class Weighting(object):
         return self._weight
 
     #computes the decomposed total return of a weighted asset
-    def make_partial_index(self, date):
+    def make_partial_index(self, begin_date, end_date=None):
         """ Creates an index who's basis is weighted initially """
-        return self.asset().make_index(date, self.weight())
+        return self.asset().make_index(begin_date, self.weight(), end_date)
 
     def __eq__(self, other):
         return numpy.isclose(self.weight(), other.weight(), 3) and self.asset() == other.asset()

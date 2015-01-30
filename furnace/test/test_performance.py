@@ -3,7 +3,7 @@
 from datetime import datetime
 from furnace.data import fcalendar
 from furnace import performance, strategy
-from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth
+from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth, CALENDAR, DEFAULT_ASSET_FACTORY
 
 #TODO: look at making more specific names
 def test_buy_and_hold_spy_cagr():
@@ -12,10 +12,8 @@ def test_buy_and_hold_spy_cagr():
     """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY"])
 
-    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
+    test_strategy = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
     assert is_close(performance_.cagr(), 0.0667)
@@ -26,9 +24,7 @@ def test_buy_and_hold_spy_growth_by():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY"])
-    test_strategy = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
+    test_strategy = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
@@ -42,9 +38,7 @@ def test_volatility():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
@@ -54,9 +48,7 @@ def test_simple_sharpe():
     """ Regression test of simplified sharpe ratio """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY"])
-    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
+    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 10)
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
 
@@ -66,9 +58,11 @@ def test_number_of_trades_buyhold():
     """ Buy and hold of one single asset should have one single trade date """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
+
     calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
     asset_factory = make_default_asset_factory(["SPY"])
-    buy_and_hold = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SPY", calendar)
+
+    buy_and_hold = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SPY", CALENDAR)
 
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
 
@@ -78,9 +72,9 @@ def test_number_of_trades_ndaily():
     """ Regression test of a more aggressive rebalancing rule regarding number of trades """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
+
     asset_factory = make_default_asset_factory(["SPY"])
-    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
+    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, CALENDAR, "SPY", 10)
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
 

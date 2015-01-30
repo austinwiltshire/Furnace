@@ -5,7 +5,7 @@ Tests strategies
 from datetime import datetime
 from furnace.data import fcalendar
 from furnace import performance, strategy, portfolio, weathermen
-from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth
+from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth, CALENDAR, DEFAULT_ASSET_FACTORY
 import matplotlib
 
 def compare(perf1, perf2):
@@ -24,9 +24,7 @@ def test_bh_stocks_and_bonds_cagr():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
@@ -40,9 +38,7 @@ def test_bh_stcks_n_bnds_growth_by():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
@@ -54,12 +50,10 @@ def test_bh_stcks_n_bnds_growth_by():
 def test_multi_asset_yearly_hand():
     """ Test that 4 year holding of multi asset rebalanced strategy is near what is hand calculated """
 
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
     begin = datetime(2003, 1, 2)
     end = datetime(2007, 1, 3)
 
-    test_strategy = strategy.yearly_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2])
+    test_strategy = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
 
     performance_ = performance.fire_furnace(test_strategy, begin, end)
 
@@ -70,10 +64,8 @@ def test_single_asset_yearly():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY"])
-    rebalanced = strategy.yearly_rebalance_single_asset(asset_factory, calendar, "SPY")
-    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
+    rebalanced = strategy.yearly_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY")
+    buy_and_hold = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
@@ -85,20 +77,18 @@ def test_multi_asset_yearly():
     """ TDD for multi asset - 80% spy, 20% lqd, rebalanced yearly. Should be equivalent to two years of
     buy and hold """
 
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
 
     year_2003 = datetime(2003, 1, 2)
     year_2004 = datetime(2004, 1, 2)
     year_2005 = datetime(2005, 1, 3)
     year_2006 = datetime(2006, 1, 3)
 
-    test_strategy = strategy.yearly_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2])
+    test_strategy = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
     performance_ = performance.fire_furnace(test_strategy, year_2003, year_2006)
 
     def get_buy_and_hold_perf(begin, end):
         """ Helper to get buy and hold strategy performance over a period """
-        strat = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
+        strat = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
         return performance.fire_furnace(strat, begin, end).growth_by(end)
 
     year_1_perf = get_buy_and_hold_perf(year_2003, year_2004)
@@ -113,13 +103,11 @@ def test_multi_asset_yearly_uneq():
     """ Test that holding a multi asset index with a yearly rebalance is *not* equal to the returns of a straight
     buy and hold """
 
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
     begin = datetime(2003, 1, 2)
     end = datetime(2006, 1, 3)
 
-    rebalance = strategy.yearly_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2])
-    buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(asset_factory, begin, end, calendar)
+    rebalance = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
+    buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     rebalance_perf = performance.fire_furnace(rebalance, begin, end)
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
@@ -130,11 +118,9 @@ def test_daily_yearly_eq():
     """ Tests that a 365 day rebalancing rule is equivalent to a yearly rebalancing rule """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
 
-    daily = strategy.ndays_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2], 252)
-    yearly = strategy.yearly_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.8, .2])
+    daily = strategy.ndays_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2], 252)
+    yearly = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
 
     daily_performance = performance.fire_furnace(daily, begin, end)
     yearly_performance = performance.fire_furnace(yearly, begin, end)
@@ -147,10 +133,8 @@ def test_single_yearly_daily():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY"])
-    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, calendar, "SPY", 10)
-    buy_and_hold = strategy.buy_and_hold_stocks(asset_factory, begin, end, calendar)
+    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 10)
+    buy_and_hold = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
     rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
     buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
@@ -170,10 +154,8 @@ def test_real_estate():
     """ Regression test on the real estate index IYR """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["IYR"])
 
-    strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "IYR", calendar)
+    strat = strategy.buy_and_hold_single_asset(DEFAULT_ASSET_FACTORY, begin, end, "IYR", CALENDAR)
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), 0.0954)
@@ -183,10 +165,8 @@ def test_money_market():
     """ Regression test on the money market index SHV """
     begin = datetime(2007, 1, 11)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SHV"])
 
-    strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SHV", calendar)
+    strat = strategy.buy_and_hold_single_asset(DEFAULT_ASSET_FACTORY, begin, end, "SHV", CALENDAR)
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), 0.0136)
@@ -200,10 +180,8 @@ def test_bull_dollar():
     """ Regression test on the bullish dollar index UUP """
     begin = datetime(2007, 3, 1)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["UUP"])
 
-    strat = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "UUP", calendar)
+    strat = strategy.buy_and_hold_single_asset(DEFAULT_ASSET_FACTORY, begin, end, "UUP", CALENDAR)
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), -0.0204)
@@ -213,11 +191,10 @@ def test_commodities():
     """ Regression test on the commodities tracking index GSG """
     begin = datetime(2006, 7, 21)
     end = datetime(2012, 12, 31)
-    asset_factory = make_default_asset_factory(["GSG"])
-    gsg = asset_factory.make_asset("GSG")
+    gsg = DEFAULT_ASSET_FACTORY.make_asset("GSG")
 
-    assert is_close(gsg.between(begin, end).total_return(), -.3342)
-    assert is_close(gsg.between(begin, end).volatility(), .2755)
+    assert is_close(gsg.total_return(begin, end), -.3342)
+    assert is_close(gsg.volatility(begin, end), .2755)
 
 def test_proportional_portfolio():
     """ Regression test of the proportional portfolio strategy with full history forecasts
@@ -228,13 +205,11 @@ def test_proportional_portfolio():
     """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD"])
 
     strat = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD"]),
-        asset_factory,
-        strategy.NDayRebalance(calendar, 25),
+        DEFAULT_ASSET_FACTORY,
+        strategy.NDayRebalance(CALENDAR, 25),
         weathermen.HistoricalAverage()
     )
 
@@ -254,14 +229,12 @@ def test_period_average_w_reit():
 
     begin = datetime(2004, 1, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR"])
 
     strat = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD", "IYR"]),
-        asset_factory,
-        strategy.NDayRebalance(calendar, 25),
-        weathermen.PeriodAverage(calendar)
+        DEFAULT_ASSET_FACTORY,
+        strategy.NDayRebalance(CALENDAR, 25),
+        weathermen.PeriodAverage(CALENDAR)
     )
 
     perf = strat.performance_during(begin, end)
@@ -273,35 +246,31 @@ def test_period_average_w_reit():
 def test_currency_momentum():
     """ UUP, a bullish dollar currency etf, does surprisingly well with momentum whereas stocks tend to have a negative
     monthly autocorrelation. This is purely a regression test """
-    begin = datetime(2007, 3, 1)
+    begin = datetime(2007, 5, 1)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
 
     strat = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        asset_factory,
-        strategy.NDayRebalance(calendar, 25),
-        weathermen.PeriodAverage(calendar)
+        DEFAULT_ASSET_FACTORY,
+        strategy.NDayRebalance(CALENDAR, 25),
+        weathermen.PeriodAverage(CALENDAR)
     )
 
     perf = strat.performance_during(begin, end)
 
-    assert is_close(perf.cagr(), 0.0858)
-    assert is_close(perf.simple_sharpe(), .759)
+    assert is_close(perf.cagr(), 0.0664)
+    assert is_close(perf.simple_sharpe(), .608)
 
 def test_v1_mom():
 
     begin = datetime(2009, 3, 2)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP"])
 
     strat = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        asset_factory,
-        strategy.NDayRebalance(calendar, 25),
-        weathermen.PeriodAverage(calendar)
+        DEFAULT_ASSET_FACTORY,
+        strategy.NDayRebalance(CALENDAR, 25),
+        weathermen.PeriodAverage(CALENDAR)
     )
 
     perf = strat.performance_during(begin, end)
@@ -315,26 +284,24 @@ def test_simple_linear_specific():
 
     begin = datetime(2007, 6, 4)
     end = datetime(2012, 12, 31)
-    calendar = fcalendar.make_fcalendar(datetime(2000, 1, 1))
-    asset_factory = make_default_asset_factory(["SPY", "LQD", "UUP"])
 
-    spy = asset_factory.make_asset("SPY")
-    lqd = asset_factory.make_asset("LQD")
-    uup = asset_factory.make_asset("UUP")
+    spy = DEFAULT_ASSET_FACTORY.make_asset("SPY")
+    lqd = DEFAULT_ASSET_FACTORY.make_asset("LQD")
+    uup = DEFAULT_ASSET_FACTORY.make_asset("UUP")
 
-    spy_weatherman = weathermen.SimpleLinear(calendar, spy)
+    spy_weatherman = weathermen.SimpleLinear(CALENDAR, spy)
 
     #The simple linear forecaster is actually really bad for lqd, so we use historical
     lqd_weatherman = weathermen.HistoricalAverage()
-    uup_weatherman = weathermen.SimpleLinear(calendar, uup)
+    uup_weatherman = weathermen.SimpleLinear(CALENDAR, uup)
 
     forecasts_dictionary = {spy: spy_weatherman, lqd: lqd_weatherman, uup: uup_weatherman}
     test_weatherman = weathermen.AssetSpecific(forecasts_dictionary)
 
     strat = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        asset_factory,
-        strategy.NDayRebalance(calendar, 25),
+        DEFAULT_ASSET_FACTORY,
+        strategy.NDayRebalance(CALENDAR, 25),
         test_weatherman
     )
 
@@ -342,3 +309,9 @@ def test_simple_linear_specific():
 
     assert is_close(perf.cagr(), 0.0542)
     assert is_close(perf.simple_sharpe(), 0.486)
+
+#TODO: wasn't able to get to this. ARMA models work best with daily prices, and don't really get anything useful at all
+#out of monthly prices. thus, we really need to go for a daily price model before we can add this test.
+def test_arma():
+    """ An attempt to use an arma model """
+    pass

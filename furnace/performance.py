@@ -86,6 +86,7 @@ class OverallPerformance(object):
 
     #TODO: add test on this.
     #FIXME: cardinality no longer is a useful idea on the 'asset universe'.
+    #FIXME: yep, cardinality is now officially a bug.
     def number_of_trades(self):
         """ Simple turnover metric - an estimate of the number of trades we make """
         return len(self._portfolio_periods) * self._asset_universe.cardinality()

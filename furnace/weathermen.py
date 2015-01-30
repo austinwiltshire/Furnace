@@ -71,7 +71,7 @@ class HistoricalAverageForecast(Forecast):
         super(HistoricalAverageForecast, self).__init__(asset_factory)
 
     def simple_sharpe(self, asset):
-        return asset.simple_sharpe()
+        return asset.simple_sharpe(asset.begin(), asset.end())
 #pylint: enable=R0903
 
 #NOTE: expected that this interface will grow
@@ -119,13 +119,13 @@ class PeriodAverageForecast(Forecast):
         end = self._time_point
 
 #TODO: assert that asset supports begin and end dates
-        return asset.between(begin, end).simple_sharpe()
+        return asset.simple_sharpe(begin, end)
 
     def cagr(self, asset):
         """ Returns a period average based forecast of growth"""
         begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
         end = self._time_point
-        return asset.between(begin, end).cagr()
+        return asset.cagr(begin, end)
 
 #pylint: enable=R0903
 
@@ -151,14 +151,14 @@ class SimpleLinearForecast(Forecast):
         """ Uses a simple historical volatility """
         begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
         end = self._time_point
-        return asset.between(begin, end).volatility()
+        return asset.volatility(begin, end)
 
     def cagr(self, asset):
         """ Returns a period average based forecast of growth"""
         begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
         end = self._time_point
         assert self._calendar.trading_days_between(begin, end) == 25
-        return annualized(self._model.predict([1.0, asset.between(begin, end).total_return()]), 25)
+        return annualized(self._model.predict([1.0, asset.total_return(begin, end)]), 25)
 
 class SimpleLinear(Weatherman):
     """ Returns the stats of a particular asset via a simple linear regression of 

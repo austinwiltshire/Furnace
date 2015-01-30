@@ -79,47 +79,64 @@ class Asset(object):
 
     #NOTE: this function is slow, especially in rapidly readjusted strategies
     #TODO: why not set an end to the index? a lot of the index values are thrown away for fast changing dates
-    def make_index(self, date, basis):
+    def make_index(self, begin_date, basis, end_date):
         """ Creates an index for this asset weighted initially at basis """
-        table = self._table[self._table.index >= date]
+        table = self._table[(self._table.index >= begin_date) & (self._table.index <= end_date)]["Adjusted Close"]
 
-        initial_basis = basis / table.ix[date]['Adjusted Close']
+        initial_basis = basis / table.ix[begin_date]
 
-        return table['Adjusted Close'] * initial_basis
-
-#TODO 1.1 needs testing
-    def between(self, begin, end):
-        """ Returns this asset's performance but restricted between begin and end dates
-        inclusively of both """
-        restricted_table = self._table[self._table.index <= end]
-        restricted_table = restricted_table[restricted_table.index >= begin]
-        return Asset(self._symbol, restricted_table, self._calendar)
+        return table * initial_basis
 
     #TODO 1.1 add to some sort of helper class rather than reimplementing everywhere
     #TODO 1.1 test
-    def total_return(self):
+    def total_return(self, begin_date, end_date):
         """ The total return of this asset if held from the first date to the last date """
-        begin = self._table["Adjusted Close"].ix[0]
-        end = self._table["Adjusted Close"].ix[-1]
+        table = self._table["Adjusted Close"]
+        assert begin_date >= table.index[0]
+        assert end_date <= table.index[-1]
+
+        begin = self._table["Adjusted Close"].ix[begin_date]
+        end = self._table["Adjusted Close"].ix[end_date]
         return growth(begin, end)
 
+    def begin(self):
+        return self._table.index[0]
+
+    def end(self):
+        return self._table.index[-1]
+
 #TODO: hand test this for spy
     #TODO 1.1 this should take in a begin/end period
-    def cagr(self):
+    def cagr(self, begin_date, end_date):
         """ The compound adjusted geometric return of this asset if held from the first date to the last date """
-        return annualized(self.total_return(), len(self._table))
+        table = self._table["Adjusted Close"]
+        assert begin_date >= table.index[0]
+        assert end_date <= table.index[-1]
+
+        #NOTE: we add one to represent holding it both on the first and last days.
+        return annualized(
+                self.total_return(begin_date, end_date),
+                self._calendar.trading_days_between(begin_date, end_date) + 1
+                )
 
 #TODO: hand test this for spy
     #TODO 1.1 this should take in a begin/end period
-    def volatility(self):
+    #TODO: could potentially precalculate a rolling volatility all at once per asset and trading period
+    def volatility(self, begin, end):
         """ The volatility of this asset over the entire data period """
-        
-        return numpy.sqrt(fcalendar.trading_days_in_year()*self._table["Adjusted Close"].pct_change().dropna().var())
+        table = self._table["Adjusted Close"]
+        assert begin >= table.index[0]
+        assert end <= table.index[-1]
+
+        table = table[table.index >= begin]
+        variance = table[table.index <= end].pct_change().dropna().var()
+
+        return numpy.sqrt(fcalendar.trading_days_in_year()*variance)
 
 #TODO: hand test this for spy
-    def simple_sharpe(self):
+    def simple_sharpe(self, begin_date, end_date):
         """ Returns the simplified sharpe ratio of this asset over the entire data period """
-        return self.cagr() / self.volatility()
+        return self.cagr(begin_date, end_date) / self.volatility(begin_date, end_date)
 
     def yahoo_adjusted_return(self, begin, end):
         """ Helper method to get yahoo's own reported return, useful for debugging """
