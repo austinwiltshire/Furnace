@@ -5,7 +5,7 @@
 #This may need to be re-looked at if i move to python 3 or other changes to the dateutil library.
 #It has a new version that's 3 only
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, YEARLY, MO, TU, WE, TH, FR
 import bisect
 from pandas import Series
@@ -20,10 +20,6 @@ class FCalendar(object):
     def __init__(self, dates):
         self._dates = dates
 
-#TODO: should not expose iter method. Should also figure out how to index and slice a pandas time series by date
-    def __iter__(self):
-        return iter(self._dates)
-
     def __contains__(self, value):
         return numpy.datetime64(value) in self._dates.values
 
@@ -37,9 +33,21 @@ class FCalendar(object):
 
         return self._dates[bisect.bisect_right(self._dates, a_date) - (nth + 1)]
 
-    def trading_days_between(self, begin, end):
+    def number_trading_days_between(self, begin, end):
         """ Returns the number of trading days between begin and end, exclusive of begin inclusive of end """
         return len(self._dates[self._dates > begin][self._dates <= end])
+
+    #TODO: test
+    def every_nth_between(self, begin, end, ndays):
+        """ Iteration helper that gives every nth trading day between begin and end """
+
+        #NOTE: we add one day to ensure that if end is a trading day we count it as our last period's end
+        current, end = self._dates.index[(self.nth_trading_day_after(0, begin) == self._dates) |
+                                         (self.nth_trading_day_before(0, end + timedelta(1)) == self._dates)]
+
+        #NOTE: plus 1 to ensure end is in the series
+        return self._dates[current:end+1:ndays]
+
 
 def make_fcalendar(begin_date):
     """ Factory function for financial calendars """

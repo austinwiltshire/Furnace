@@ -157,7 +157,7 @@ class SimpleLinearForecast(Forecast):
         """ Returns a period average based forecast of growth"""
         begin = self._calendar.nth_trading_day_before(self._period, self._time_point)
         end = self._time_point
-        assert self._calendar.trading_days_between(begin, end) == 25
+        assert self._calendar.number_trading_days_between(begin, end) == 25
         return annualized(self._model.predict([1.0, asset.total_return(begin, end)]), 25)
 
 class SimpleLinear(Weatherman):

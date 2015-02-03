@@ -2,30 +2,62 @@
 
 import pandas
 import urllib2
+import re
+import os
 
-def load_symbol(price_file, dividend_file, split_file):
+def decorate_table(table):
+    """ Adds the yield, split adjustment, basis adjustment and ensemble adjusted close columns to a vanilla table """
+
+    table["Yield"] = table['Dividends'] / table['Close']
+    accumulated_yield = (table["Yield"] + 1.0).dropna().cumprod()
+
+    #pull all splits forward in time, and fill any remaining nulls with 1
+    table["Split Adjustment"] = table["SplitRatio"].fillna(method='ffill').fillna(1)
+
+    #note: we assume dividends are reinvested on the day of
+    table["Basis Adjustment"] = accumulated_yield.reindex(table.index,
+                                                          method='ffill',
+                                                          fill_value=1.0)
+    table["Adjusted Close"] = (table["Close"] *
+                               table["Basis Adjustment"] *
+                               table["Split Adjustment"])
+    return table
+
+def load_symbol(symbol):
+    """ Generates files we should be looking for and loads symbol from those files """
+
+    data_directory = "data"
+    price_file = "{0}/{1}.csv".format(data_directory, symbol)
+    dividends_file = "{0}/{1}_div.csv".format(data_directory, symbol)
+    split_file = "{0}/{1}_split.csv".format(data_directory, symbol)
+    return load_symbol_from_files(price_file, dividends_file, split_file)
+
+def load_symbol_from_files(price_file, dividend_file, split_file):
     """ Reads in a symbol from price and dividend files """
+
     prices = pandas.read_csv(price_file, index_col="Date", parse_dates=True)
     dividends = pandas.read_csv(dividend_file, index_col="Date", parse_dates=True)
     splits = pandas.read_csv(split_file, index_col="Date", parse_dates=True)
-    return pandas.concat([prices, dividends, splits], axis=1).sort_index()
+    return decorate_table(pandas.concat([prices, dividends, splits], axis=1).sort_index())
 
-#NOTE: data_cache will be eager loaded (current design, anyway)
 def load_pandas():
     """ Loads required data files. Experimental """
 
-    pandas_data = {}
+    symbol_finder = re.compile(
+        r"^" #start at the beginning
+        r"(?P<symbol_name>[^_]*)" #capture a group named symbol_name of any characters ending with _, don't capture _
+        r"(_[div|split])?" #it can end with _div or _split or not.
+        r"\.csv$" #it must end with .csv
+    )
 
-#TODO: 1.1 remove repeated code and introspect the data directory to find all possible symbols
-    pandas_data["SPY"] = load_symbol("data/spy.csv", "data/spy_div.csv", "data/spy_split.csv")
-    pandas_data["LQD"] = load_symbol("data/lqd.csv", "data/lqd_div.csv", "data/lqd_split.csv")
-    pandas_data["IYR"] = load_symbol("data/iyr.csv", "data/iyr_div.csv", "data/iyr_split.csv")
-    pandas_data["SHV"] = load_symbol("data/shv.csv", "data/shv_div.csv", "data/shv_split.csv")
-    pandas_data["UUP"] = load_symbol("data/uup.csv", "data/uup_div.csv", "data/uup_split.csv")
-    pandas_data["GSG"] = load_symbol("data/gsg.csv", "data/gsg_div.csv", "data/gsg_split.csv")
+    symbols = set(
+        symbol_finder.match(directory).group("symbol_name").upper()
+        for directory
+        in os.listdir("./data")
+        if symbol_finder.match(directory)
+    )
 
-
-    return pandas_data
+    return dict((key, load_symbol(key)) for key in symbols)
 
 def webload_symbol_price(symbol, begin_date, end_date):
     """ Loads a symbol's price straight from the web """

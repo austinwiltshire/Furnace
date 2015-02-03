@@ -29,7 +29,7 @@ class TradingPeriod(object):
 
     def trading_days(self, calendar):
         """ Returns the number of trading days in this period using calendar """
-        return calendar.trading_days_between(self._begin, self._end)
+        return calendar.number_trading_days_between(self._begin, self._end)
 
 class Strategy(object):
     """ A pair of weatherman and portfolio optimizer """
@@ -112,7 +112,7 @@ class BuyAndHold(RebalancingRule):
 
     def period_length(self):
         """ Returns the length of the buy and hold period """
-        return self._fcalendar.trading_days_between(self._begin_date, self._end_date)
+        return self._fcalendar.number_trading_days_between(self._begin_date, self._end_date)
 
 class AnnualRebalance(RebalancingRule):
     """ Annual rebalance rebalances every year on same day as begin_date """
@@ -143,15 +143,11 @@ class NDayRebalance(RebalancingRule):
         self._fcalendar = fcalendar
         self._ndays = ndays
 
-#TODO: move this inside fcalendar. should not expose __iter__ method
     def periods_during(self, begin_date, end_date):
         """ Iterates through every n days starting at begin date """
-        dates = [date for date in self._fcalendar]
-        current = dates.index(self._fcalendar.nth_trading_day_after(0, begin_date))
+        periods = self._fcalendar.every_nth_between(begin_date, end_date, self._ndays)
+        periods = zip(periods[:-1],periods[1:])
 
-        #NOTE: we add one day to ensure that if end is a trading day we count it as our last period's end
-        end = dates.index(self._fcalendar.nth_trading_day_before(0, end_date + datetime.timedelta(1)))
-        periods = zip(dates[current:end-self._ndays:self._ndays], dates[current + self._ndays:end:self._ndays])
         periods = [TradingPeriod(date1, date2) for date1, date2 in periods]
         assert all(tp.trading_days(self._fcalendar) == self._ndays for tp in periods)
         return periods

@@ -10,10 +10,10 @@ def growth(begin, end):
     """ Calculates the percent growth between two values """
     return (end - begin) / begin
 
-def annualized(growth, days_represented):
+def annualized(unannualized_growth, days_represented):
     """ Returns the annualized growth or CAGR of growth if growth takes place over
     days represented """
-    return pow(1.0 + growth, 1.0 / (days_represented / fcalendar.trading_days_in_year())) - 1.0
+    return pow(1.0 + unannualized_growth, 1.0 / (days_represented / fcalendar.trading_days_in_year())) - 1.0
 
 def adjust_period(rate, original_period, new_period):
     """ Adjusts the rate given in to be the same rate over the new period. For example, adjusting
@@ -23,18 +23,16 @@ def adjust_period(rate, original_period, new_period):
     daily_rate = pow(1.0 + rate, 1.0 / original_period) - 1.0
     return pow(daily_rate + 1.0, new_period) - 1.0
 
-#TODO: this is more of an asset factory. An asset universe is a separate set of assets and probably needs
-#to be it's own object.
+#TODO: split below into an asset factory and asset universe. The factory just provides access to the 
+#asset files via various loading schemes like yahoo. The universe actually represents a small set of assets
+#a particular model will trade
+#NOTE: data_cache is expected to be eager loaded (current design, anyway)
 class AssetUniverse(object):
-    """ Represents all tradable assets for any particular model. """
-    #TODO: move self._assets line to a factory function
+    """ Represents all tradable assets loaded """
     def __init__(self, supported_symbols, data_cache, calendar):
         self._data_cache = data_cache
         self._calendar = calendar
         self._supported_symbols = set(supported_symbols)
-
-        #NOTE: cached for great performance
-        self._assets = dict((name, self.make_asset(name)) for name in self._supported_symbols)
 
     def make_asset(self, symbol):
         """ Creates an asset based on the ticker symbol """
@@ -53,32 +51,15 @@ class AssetUniverse(object):
         """ Returns the size of this asset universe """
         return len(self._supported_symbols)
 
-
 class Asset(object):
     """ Represents a tradable security, by symbol, over a period of time """
-    #TODO: add complex initialization to factory function
-    def __init__(self, symbol, data_cache, calendar):
-
-
+    def __init__(self, symbol, table, calendar):
         self._symbol = symbol
-        self._table = data_cache
+        self._table = table
         self._calendar = calendar
-        self._table["Yield"] = self._table['Dividends'] / self._table['Close']
-        accumulated_yield = (self._table["Yield"] + 1.0).dropna().cumprod()
 
-        #pull all splits forward in time, and fill any remaining nulls with 1
-        self._table["Split Adjustment"] = self._table["SplitRatio"].fillna(method='ffill').fillna(1)
-
-        #note: we assume dividends are reinvested on the day of
-        self._table["Basis Adjustment"] = accumulated_yield.reindex(self._table.index,
-                                                                         method='ffill',
-                                                                         fill_value=1.0)
-        self._table["Adjusted Close"] = (self._table["Close"] *
-                                         self._table["Basis Adjustment"] *
-                                         self._table["Split Adjustment"])
-
-    #NOTE: this function is slow, especially in rapidly readjusted strategies
-    #TODO: why not set an end to the index? a lot of the index values are thrown away for fast changing dates
+    #NOTE: this function is slow, especially in rapidly readjusted strategies, and has gone through two rounds of
+    #optimization
     def make_index(self, begin_date, basis, end_date):
         """ Creates an index for this asset weighted initially at basis """
         table = self._table[(self._table.index >= begin_date) & (self._table.index <= end_date)]["Adjusted Close"]
@@ -87,8 +68,8 @@ class Asset(object):
 
         return table * initial_basis
 
-    #TODO 1.1 add to some sort of helper class rather than reimplementing everywhere
-    #TODO 1.1 test
+    #TODO add to some sort of helper class rather than reimplementing everywhere
+    #TODO test
     def total_return(self, begin_date, end_date):
         """ The total return of this asset if held from the first date to the last date """
         table = self._table["Adjusted Close"]
@@ -100,13 +81,14 @@ class Asset(object):
         return growth(begin, end)
 
     def begin(self):
+        """ Returns the first date that this asset table supports """
         return self._table.index[0]
 
     def end(self):
+        """ Returns the last date that this asset table supports """
         return self._table.index[-1]
 
-#TODO: hand test this for spy
-    #TODO 1.1 this should take in a begin/end period
+    #TODO: hand test this for spy
     def cagr(self, begin_date, end_date):
         """ The compound adjusted geometric return of this asset if held from the first date to the last date """
         table = self._table["Adjusted Close"]
@@ -116,11 +98,10 @@ class Asset(object):
         #NOTE: we add one to represent holding it both on the first and last days.
         return annualized(
                 self.total_return(begin_date, end_date),
-                self._calendar.trading_days_between(begin_date, end_date) + 1
+                self._calendar.number_trading_days_between(begin_date, end_date) + 1
                 )
 
-#TODO: hand test this for spy
-    #TODO 1.1 this should take in a begin/end period
+    #TODO: hand test this for spy
     #TODO: could potentially precalculate a rolling volatility all at once per asset and trading period
     def volatility(self, begin, end):
         """ The volatility of this asset over the entire data period """
@@ -133,7 +114,7 @@ class Asset(object):
 
         return numpy.sqrt(fcalendar.trading_days_in_year()*variance)
 
-#TODO: hand test this for spy
+    #TODO: hand test this for spy
     def simple_sharpe(self, begin_date, end_date):
         """ Returns the simplified sharpe ratio of this asset over the entire data period """
         return self.cagr(begin_date, end_date) / self.volatility(begin_date, end_date)
@@ -144,15 +125,14 @@ class Asset(object):
         last = self._table.ix[end]['Adj Close']
         return (last - first) / first
 
-#TODO: probably need to make sure these things came from the same factory
+    #TODO: probably need to make sure these things came from the same factory
     def __eq__(self, other):
         return self._symbol == other #pylint: disable=W0212
 
     def __hash__(self):
         #TODO: currently this object conflates the abstract idea of an asset symbol as well as a set amount
         #of asset + date data. the hash only reflects the symbol itself, meaning that two assets with the
-        #same symbol but one using different dates (using the 'between' helper) would conflict in the same
-        #hash table
+        #same symbol but might support different dates in their table indecies hash table
         return hash(self._symbol)
 
     def __repr__(self):
