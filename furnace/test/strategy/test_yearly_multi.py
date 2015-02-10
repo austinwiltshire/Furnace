@@ -1,10 +1,8 @@
 " Tests strategies with a rebalancing rate of a year holding multiple assets "
 
 from datetime import datetime
-from furnace.data import fcalendar
-from furnace import performance, strategy, portfolio, weathermen
-from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth, CALENDAR, DEFAULT_ASSET_FACTORY
-import matplotlib
+from furnace import strategy
+from furnace.test.helpers import is_close, compound_growth, CALENDAR, DEFAULT_ASSET_FACTORY
 
 def test_multi_asset_yearly_hand():
     """ Test that 4 year holding of multi asset rebalanced strategy is near what is hand calculated """
@@ -14,7 +12,7 @@ def test_multi_asset_yearly_hand():
 
     test_strategy = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
 
-    performance_ = performance.fire_furnace(test_strategy, begin, end)
+    performance_ = test_strategy.performance_during(begin, end)
 
     assert is_close(performance_.growth_by(end), 0.574)
 
@@ -26,8 +24,8 @@ def test_single_asset_yearly():
     rebalanced = strategy.yearly_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY")
     buy_and_hold = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
-    rebalanced_perf = performance.fire_furnace(rebalanced, begin, end)
-    buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
+    rebalanced_perf = rebalanced.performance_during(begin, end)
+    buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
     test_date = datetime(2011, 12, 30)
 
     assert is_close(rebalanced_perf.growth_by(test_date), buy_and_hold_perf.growth_by(test_date))
@@ -43,12 +41,12 @@ def test_multi_asset_yearly():
     year_2006 = datetime(2006, 1, 3)
 
     test_strategy = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
-    performance_ = performance.fire_furnace(test_strategy, year_2003, year_2006)
+    performance_ = test_strategy.performance_during(year_2003, year_2006)
 
     def get_buy_and_hold_perf(begin, end):
         """ Helper to get buy and hold strategy performance over a period """
         strat = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
-        return performance.fire_furnace(strat, begin, end).growth_by(end)
+        return strat.performance_during(begin, end).growth_by(end)
 
     year_1_perf = get_buy_and_hold_perf(year_2003, year_2004)
     year_2_perf = get_buy_and_hold_perf(year_2004, year_2005)
@@ -68,8 +66,8 @@ def test_multi_asset_yearly_uneq():
     rebalance = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
     buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
-    rebalance_perf = performance.fire_furnace(rebalance, begin, end)
-    buy_and_hold_perf = performance.fire_furnace(buy_and_hold, begin, end)
+    rebalance_perf = rebalance.performance_during(begin, end)
+    buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
 
     assert not is_close(rebalance_perf.growth_by(end), buy_and_hold_perf.growth_by(end))
 

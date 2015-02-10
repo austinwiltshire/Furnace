@@ -1,7 +1,7 @@
 " Tests behavior of the annual rebalancing rule "
 
 from datetime import datetime
-from furnace import performance, strategy
+from furnace import strategy
 from furnace.test.helpers import is_close, CALENDAR, DEFAULT_ASSET_FACTORY
 
 def test_perf_eq_buy_and_hold():
@@ -21,8 +21,8 @@ def test_perf_eq_buy_and_hold():
     last_start = periods[-1].begin()
     last_end = periods[-1].end()
 
-    reference_performance = performance.fire_furnace(reference, begin, end)
-    rebalanced_performance = performance.fire_furnace(rebalanced, begin, end)
+    reference_performance = reference.performance_during(begin, end)
+    rebalanced_performance = rebalanced.performance_during(begin, end)
 
     def equivalent_performance(date):
         """ Checks that reference and rebalanced portfolio growth is the same """

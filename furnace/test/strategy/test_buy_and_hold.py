@@ -1,12 +1,9 @@
 " Tests the buy and hold strategy "
 
 from datetime import datetime
-from furnace.data import fcalendar
-from furnace import performance, strategy, portfolio, weathermen
-from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth, CALENDAR, DEFAULT_ASSET_FACTORY
-import matplotlib
+from furnace import strategy
+from furnace.test.helpers import is_close, CALENDAR, DEFAULT_ASSET_FACTORY
 
-#TODO: look at making more specific names
 def test_stocks_bonds_cagr():
     """ Tests buy and hold of two assets, spy and lqd, cagr metric from 2003-1-2 to 2012-12-31
 
@@ -17,7 +14,7 @@ def test_stocks_bonds_cagr():
     end = datetime(2012, 12, 31)
     test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
-    performance_ = performance.fire_furnace(test_strategy, begin, end)
+    performance_ = test_strategy.performance_during(begin, end)
 
     assert is_close(performance_.cagr(), 0.0666)
 
@@ -31,7 +28,7 @@ def test_stocks_bonds_growth_by():
     end = datetime(2012, 12, 31)
     test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
 
-    performance_ = performance.fire_furnace(test_strategy, begin, end)
+    performance_ = test_strategy.performance_during(begin, end)
 
     assert is_close(performance_.growth_by(begin), 0.0)
     assert is_close(performance_.growth_by(datetime(2003, 2, 3)), -0.0396)

@@ -66,7 +66,10 @@ def test_range():
         dates_available = set(timestamp.to_pydatetime() for timestamp in prices_available.index.tolist())
         pickle.dump(dates_available, open("spy_price_cache_" + str(datetime.date.today()) + ".csv", "w"))
 
-    dates_expected = set([day for day in itertools.takewhile(lambda d: d <= end_date, CALENDAR.every_nth_between(begin_date, end_date, 1))])
+    dates_expected = set([day for day in itertools.takewhile(
+        lambda d: d <= end_date,
+        CALENDAR.every_nth_between(begin_date, end_date, 1)
+    )])
 
     dates_misaligned = dates_available.symmetric_difference(dates_expected)
 

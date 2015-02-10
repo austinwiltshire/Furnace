@@ -1,14 +1,19 @@
 """
-Tests strategies
+Tests strategies. This might include tests of the instruments of strategies, such as portfolio optimizers,
+forecasts, etc., but ultimately is about the overall strategy and it's performance.
 """
 
+#TODO: should this module be moved into something like labs instead of test? It's primarily exploratory 
+#integration regression tests
+
 from datetime import datetime
-from furnace.data import fcalendar
-from furnace import performance, strategy, portfolio, weathermen
-from furnace.test.helpers import make_default_asset_factory, is_close, compound_growth, CALENDAR, DEFAULT_ASSET_FACTORY
+from furnace import strategy, portfolio, weathermen
+from furnace.test.helpers import is_close, CALENDAR, DEFAULT_ASSET_FACTORY
 import matplotlib
 
 def compare(perf1, perf2):
+    """ Helper function that compares two strategies performances """
+
     perf1.plot_index(100.0)
     perf2.plot_index(100.0)
     print perf1.cagr(), " ", perf1.simple_sharpe()
@@ -37,7 +42,7 @@ def test_proportional_portfolio():
     assert is_close(perf.cagr(), 0.0699)
     assert is_close(perf.simple_sharpe(), 0.7606)
 
-def test_period_average_w_reit():
+def test_period_average_reit():
     """ This is a regression test of using the 1 month momentum based forecaster. It *underperforms* both in cagr and
     simple sharpe the full history. I have hacked in place an anti-momentum one month rebalancing rule, and that ends
     up outperforming a 3 asset historical rebalance. The 2 asset anti-momentum still underperforms, though. This
@@ -62,7 +67,7 @@ def test_period_average_w_reit():
     assert is_close(perf.simple_sharpe(), .33762)
 
 
-def test_currency_momentum():
+def test_period_average_currency():
     """ UUP, a bullish dollar currency etf, does surprisingly well with momentum whereas stocks tend to have a negative
     monthly autocorrelation. This is purely a regression test """
     begin = datetime(2007, 5, 1)
@@ -80,7 +85,8 @@ def test_currency_momentum():
     assert is_close(perf.cagr(), 0.0664)
     assert is_close(perf.simple_sharpe(), .608)
 
-def test_v1_mom():
+def test_currency_no_crash():
+    " A regression test of the same strategy as above but taking the 2008 crash out "
 
     begin = datetime(2009, 3, 2)
     end = datetime(2012, 12, 31)

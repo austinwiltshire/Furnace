@@ -1,4 +1,4 @@
-""" Helper functions for testing """
+""" Helper functions for testing and labs """
 
 import numpy
 from furnace.data import fcalendar, yahoo, asset

@@ -1,14 +1,11 @@
 """ Tests classes and functions in the portfolio module """
 
-
 from datetime import datetime
 from furnace import portfolio
-from furnace.test.helpers import make_default_asset_factory, is_close, DEFAULT_ASSET_FACTORY
-from furnace.data import fcalendar
+from furnace.test.helpers import is_close, DEFAULT_ASSET_FACTORY
 from furnace import weathermen
 
-#TODO: look at renaming these
-def test_all_spy_index_total_return():
+def test_index_total_return_spy():
     """ Tests the total return of an all SPY index between 2003-1-2 and 2012-12-31 is same as yahoo adj return
         for same period """
 
@@ -21,7 +18,9 @@ def test_all_spy_index_total_return():
 
     assert is_close(index.total_return_by(end), adj_return)
 
-def test_all_lqd_index_total_return():
+#TODO: make this a test on the lqd asset and reduce tests on index_on to just one, but pick an asset that has both
+#dividends and splits
+def test_index_total_return_lqd():
     """ Test that all lqd index has total return equal to yahoo adj close from 2003-1-2 to 2012-12-31 """
 
     begin = datetime(2003, 1, 2)
@@ -41,12 +40,13 @@ def test_empty_mixed_index():
     lqd = DEFAULT_ASSET_FACTORY.make_asset("LQD")
     spy = DEFAULT_ASSET_FACTORY.make_asset("SPY")
 
-    index = portfolio.Weightings([portfolio.Weighting(spy, 0.0), portfolio.Weighting(lqd, 1.0)]).make_index_on(begin, end)
-    index2 = portfolio.Weightings([portfolio.Weighting(lqd, 1.0)]).make_index_on(begin, end)
+    weighting = portfolio.Weighting
+    index = portfolio.Weightings([weighting(spy, 0.0), weighting(lqd, 1.0)]).make_index_on(begin, end)
+    index2 = portfolio.Weightings([weighting(lqd, 1.0)]).make_index_on(begin, end)
 
     assert is_close(index.total_return_by(end), index2.total_return_by(end))
 
-def test_spy_lqd_mix_index_ttl_rtn():
+def test_split_mixed_index():
     """ Test an index of 50% spy and 50% lqd, total_return_by, between 2003-1-2 and 2012-12-31
      hand calculated on aug 20th with yahoo adj close """
 
@@ -55,10 +55,14 @@ def test_spy_lqd_mix_index_ttl_rtn():
     #'already' happened. This is one benefit of using one stable understood system than relying on yahoo's black
     #magic adjusted close.
 
-
-    index = portfolio.Weightings([portfolio.Weighting(DEFAULT_ASSET_FACTORY.make_asset("LQD"), 0.5),
-                                  portfolio.Weighting(DEFAULT_ASSET_FACTORY.make_asset("SPY"), 0.5)]).make_index_on(
-                                 datetime(2003, 1, 2), datetime(2012, 12, 31))
+    weighting = portfolio.Weighting
+    index = portfolio.Weightings([
+        weighting(DEFAULT_ASSET_FACTORY.make_asset("LQD"), 0.5),
+        weighting(DEFAULT_ASSET_FACTORY.make_asset("SPY"), 0.5)
+    ]).make_index_on(
+        datetime(2003, 1, 2),
+        datetime(2012, 12, 31)
+    )
 
     assert is_close(index.total_return_by(datetime(2012, 12, 31)), .900)
 
@@ -67,7 +71,9 @@ def test_proportional_weighting():
     sharpe proportionally """
 
     portfolio_opt = portfolio.ProportionalWeighting(["SPY", "LQD"])
-    weightings = portfolio_opt.optimize(weathermen.HistoricalAverageForecast(DEFAULT_ASSET_FACTORY), DEFAULT_ASSET_FACTORY)
+    weightings = portfolio_opt.optimize(
+            weathermen.HistoricalAverage.Forecast(DEFAULT_ASSET_FACTORY), DEFAULT_ASSET_FACTORY
+    )
 
     spy = DEFAULT_ASSET_FACTORY.make_asset("SPY")
     lqd = DEFAULT_ASSET_FACTORY.make_asset("LQD")

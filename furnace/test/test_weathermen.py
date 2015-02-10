@@ -1,8 +1,7 @@
 """ Tests classes and functions in the weathermen module """
 
 from datetime import datetime
-from furnace.test.helpers import make_default_asset_factory, is_close, CALENDAR, DEFAULT_ASSET_FACTORY
-from furnace.data import fcalendar
+from furnace.test.helpers import is_close, CALENDAR, DEFAULT_ASSET_FACTORY
 from furnace import weathermen
 
 def test_period_average():

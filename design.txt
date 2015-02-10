@@ -55,6 +55,7 @@ version 2.1
 goals for v3:
 
 1. add in commissions calculation for overall performance and redo daily rebalance experiment
+1.1 fix performance.py number_of_trades
 2. feature engineering using linear model
 2.1 daily lags (try multiple days up to 5)
 2.2 weekly lags (week 1 and week 1 minus day1 for comparison)

@@ -15,6 +15,16 @@ def trading_days_in_year():
     """ Constant number of trading days in a year. We use a somewhat standard 252 """
     return 252.0
 
+#TODO: test
+def first_day_after(calender, a_date):
+    """ Convenience function that returns first day after a trading date """
+    return calender.nth_trading_day_after(0, a_date)
+
+#TODO: test
+def first_day_before(calender, a_date):
+    """ Convenience function that returns first day before a trading date """
+    return calender.nth_trading_date_before(0, a_date)
+
 class FCalendar(object):
     """ A financial calendar """
     def __init__(self, dates):
