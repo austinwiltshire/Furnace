@@ -27,7 +27,7 @@ def adjust_period(rate, original_period, new_period):
 #asset files via various loading schemes like yahoo. The universe actually represents a small set of assets
 #a particular model will trade
 #NOTE: data_cache is expected to be eager loaded (current design, anyway)
-class AssetUniverse(object):
+class AssetFactory(object):
     """ Represents all tradable assets loaded """
     def __init__(self, supported_symbols, data_cache, calendar):
         self._data_cache = data_cache

@@ -10,8 +10,8 @@ class Forecast(object):
         future """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, asset_universe):
-        self._asset_universe = asset_universe
+    def __init__(self, asset_factory):
+        self._asset_factory = asset_factory
 
     @abc.abstractmethod
     def simple_sharpe(self, asset):
@@ -32,16 +32,16 @@ def null_forecaster():
     """ A null forecaster returns canned input. Useful for testing portfolio optimizers and
     strategies that don't rely on forecasts """
 
-    def forecast(asset_universe, dummy_time_point, dummy_period):
+    def forecast(asset_factory, dummy_time_point, dummy_period):
         """ Factory function for the null forecaster """
-        return Null(asset_universe, 1.0, 1.0)
+        return Null(asset_factory, 1.0, 1.0)
     return forecast
 
 class Null(Forecast):
     """ Simply returns some default value for all symbols """
 
-    def __init__(self, asset_universe, cagr, volatility):
-        super(Null, self).__init__(asset_universe)
+    def __init__(self, asset_factory, cagr, volatility):
+        super(Null, self).__init__(asset_factory)
         self._cagr = cagr
         self._volatility = volatility
 
@@ -63,9 +63,9 @@ def historical_average():
     All data we have is used to generate the average, including all of past history and all
     future we have access too, even past the date we're looking """
 
-    def forecast(asset_universe, dummy_time_point, dummy_period):
+    def forecast(asset_factory, dummy_time_point, dummy_period):
         """ Factory function for the historical average forecaster """
-        return HistoricalAverage(asset_universe)
+        return HistoricalAverage(asset_factory)
 
     return forecast
 
@@ -88,9 +88,9 @@ def period_average(calendar):
     """ Period average forecaster uses the previous period, defined by some n-trading days ago to the present
     to generate an average for growth or volatility. """
 
-    def forecast(asset_universe, time_point, period):
+    def forecast(asset_factory, time_point, period):
         """ Factory function for the period average forecaster """
-        return PeriodAverage(asset_universe, time_point, period, calendar)
+        return PeriodAverage(asset_factory, time_point, period, calendar)
 
     return forecast
 
@@ -136,9 +136,9 @@ def simple_linear(calendar, asset):
     model = sm.OLS(y_x["growth"], y_x[["const", "growth_lag"]])
     fit = model.fit()
 
-    def make_forecast(asset_universe, time_point, period):
+    def make_forecast(asset_factory, time_point, period):
         """ Returns the forecast for a particular time period """
-        return SimpleLinear(asset_universe, fit, time_point, period, calendar)
+        return SimpleLinear(asset_factory, fit, time_point, period, calendar)
 
     return make_forecast
 
@@ -194,13 +194,13 @@ def asset_specific(weather_team):
     """ Asset specific forecaster is merely a wrapper around other forecasters that are then
     looked up on a asset symbol name basis. So for instance LQD and SPY can use different models """
 
-    def forecast(asset_universe, time_point, period):
+    def forecast(asset_factory, time_point, period):
         """ Returns a forecaster that wraps other forecasters based on asset symbol lookup"""
-        forecasts = dict([(key, forecaster(asset_universe, time_point, period))
+        forecasts = dict([(key, forecaster(asset_factory, time_point, period))
                           for key, forecaster
                           in weather_team.iteritems()])
 
-        return AssetSpecific(asset_universe, forecasts)
+        return AssetSpecific(asset_factory, forecasts)
 
     return forecast
 

@@ -36,16 +36,16 @@ class Strategy(object):
     """ A pair of weatherman and portfolio optimizer """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, portfolio_optimizer, asset_universe, rebalancing_rule, forecaster):
+    def __init__(self, portfolio_optimizer, asset_factory, rebalancing_rule, forecaster):
         self._portfolio_optimizer = portfolio_optimizer
-        self._asset_universe = asset_universe
+        self._asset_factory = asset_factory
         self._rebalancing_rule = rebalancing_rule
         self._forecaster = forecaster
 
     def performance_during(self, begin_date, end_date):
         """ Gets the overall performance from begin_date to end_date """
-        assert self._asset_universe.supports_date(begin_date)
-        assert self._asset_universe.supports_date(end_date), "calendar does not support date {0}".format(end_date)
+        assert self._asset_factory.supports_date(begin_date)
+        assert self._asset_factory.supports_date(end_date), "calendar does not support date {0}".format(end_date)
 
         period_performances = []
         for trading_period in self.periods_during(begin_date, end_date):
@@ -53,7 +53,7 @@ class Strategy(object):
             index = self.target_weighting_on(period_begin).make_index_on(period_begin, trading_period.end())
             period_performances.append(performance.make_period_performance(period_begin, trading_period.end(), index))
 
-        return performance.make_overall_performance(period_performances, self._asset_universe)
+        return performance.make_overall_performance(period_performances, self._asset_factory)
 
     def periods_during(self, begin_date, end_date):
         """ The periods this strategy operates on - i.e., weekly, monthly, daily """
@@ -63,13 +63,13 @@ class Strategy(object):
 
     def forecast(self, date):
         """ Generate a forecast for this strategy """
-        return self._forecaster(self._asset_universe, date, self._rebalancing_rule.period_length())
+        return self._forecaster(self._asset_factory, date, self._rebalancing_rule.period_length())
 
     def target_weighting_on(self, date):
         """ Generates a target portfolio this strategy would recommend for date """
 
         forecast = self.forecast(date)
-        return self._portfolio_optimizer.optimize(forecast, self._asset_universe)
+        return self._portfolio_optimizer.optimize(forecast, self._asset_factory)
 
 #NOTE: assuming there will be more rebalancing rules eventually and this interface will grow
 #pylint: disable=R0922
@@ -153,89 +153,89 @@ class NDayRebalance(RebalancingRule):
 
 #TODO: look at eliminating most of these and decomposing common helpers out of them, DRY this up
 #family strategies
-def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol, fcalendar):
+def buy_and_hold_single_asset(asset_factory, begin_date, end_date, symbol, fcalendar):
     """ Purchases a single asset at the beginning of the period and holds it to the end.
     Represents a family of potential strategies """
 
-    assert asset_universe.supports_date(begin_date)
-    assert asset_universe.supports_symbol(symbol)
+    assert asset_factory.supports_date(begin_date)
+    assert asset_factory.supports_symbol(symbol)
 
-    return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
-                    asset_universe,
+    return Strategy(portfolio.SingleAsset(asset_factory.make_asset(symbol)),
+                    asset_factory,
                     BuyAndHold(begin_date, end_date, fcalendar),
                     weathermen.null_forecaster())
 
 #TODO: i hate these methods but i'm not sure how to avoid them.
 #I'd like to pull any of their uses out of anything but test_strategy subsidiaries,
-#perhaps use a factory to remove the asset_universe and fcalendar requirements,
+#perhaps use a factory to remove the asset_factory and fcalendar requirements,
 #and then dry up anything remaining
-def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weights, fcalendar):
+def buy_and_hold_multi_asset(asset_factory, begin_date, end_date, symbols, weights, fcalendar):
     """ Purchses a set of assets with specific weights at the beginning of the period and holds them to the end.
     Represents a family of buy and hold multi asset strategies that vary on asset mix and weights """
 
-    assert asset_universe.supports_date(begin_date)
+    assert asset_factory.supports_date(begin_date)
 
-    assert all(asset_universe.supports_symbol(symbol) for symbol in symbols)
-    weightings = portfolio.Weightings([portfolio.Weighting(asset_universe.make_asset(symbol), weight)
+    assert all(asset_factory.supports_symbol(symbol) for symbol in symbols)
+    weightings = portfolio.Weightings([portfolio.Weighting(asset_factory.make_asset(symbol), weight)
                                        for symbol, weight in zip(symbols, weights)])
 
     return Strategy(portfolio.StaticTarget(weightings),
-                    asset_universe,
+                    asset_factory,
                     BuyAndHold(begin_date, end_date, fcalendar),
                     weathermen.null_forecaster())
 
-def yearly_rebalance_single_asset(asset_universe, fcalendar, symbol):
+def yearly_rebalance_single_asset(asset_factory, fcalendar, symbol):
     """ A single asset that is rebalanced. This is a no-op strategy used for testing """
 
-    assert asset_universe.supports_symbol(symbol)
+    assert asset_factory.supports_symbol(symbol)
 
-    return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
-                    asset_universe,
+    return Strategy(portfolio.SingleAsset(asset_factory.make_asset(symbol)),
+                    asset_factory,
                     AnnualRebalance(fcalendar),
                     weathermen.null_forecaster())
 
-def yearly_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights):
+def yearly_rebalance_multi_asset(asset_factory, fcalendar, symbols, weights):
     """ An annually rebalanced multi asset portfolio with static targets. """
 
-    assert all(asset_universe.supports_symbol(symbol) for symbol in symbols)
-    weightings = portfolio.Weightings([portfolio.Weighting(asset_universe.make_asset(symbol), weight)
+    assert all(asset_factory.supports_symbol(symbol) for symbol in symbols)
+    weightings = portfolio.Weightings([portfolio.Weighting(asset_factory.make_asset(symbol), weight)
                                        for symbol, weight in zip(symbols, weights)])
 
     return Strategy(portfolio.StaticTarget(weightings),
-                    asset_universe,
+                    asset_factory,
                     AnnualRebalance(fcalendar),
                     weathermen.null_forecaster())
 
-def ndays_rebalance_single_asset(asset_universe, fcalendar, symbol, days):
+def ndays_rebalance_single_asset(asset_factory, fcalendar, symbol, days):
     """ A single asset that is rebalanced. This is a no-op strategy used for testing """
 
-    assert asset_universe.supports_symbol(symbol)
+    assert asset_factory.supports_symbol(symbol)
 
-    return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
-                    asset_universe,
+    return Strategy(portfolio.SingleAsset(asset_factory.make_asset(symbol)),
+                    asset_factory,
                     NDayRebalance(fcalendar, days),
                     weathermen.null_forecaster())
 
-def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, days):
+def ndays_rebalance_multi_asset(asset_factory, fcalendar, symbols, weights, days):
     """ A multi asset portfolio that is rebalanced every n days """
 
-    assert all([asset_universe.supports_symbol(symbol) for symbol in symbols])
+    assert all([asset_factory.supports_symbol(symbol) for symbol in symbols])
 
-    weightings = portfolio.Weightings([portfolio.Weighting(asset_universe.make_asset(symbol), weight)
+    weightings = portfolio.Weightings([portfolio.Weighting(asset_factory.make_asset(symbol), weight)
                                        for symbol, weight in zip(symbols, weights)])
 
     return Strategy(portfolio.StaticTarget(weightings),
-                    asset_universe,
+                    asset_factory,
                     NDayRebalance(fcalendar, days),
                     weathermen.null_forecaster())
 
-def buy_and_hold_stocks(asset_universe, begin_date, end_date, fcalendar):
+def buy_and_hold_stocks(asset_factory, begin_date, end_date, fcalendar):
     """ Purchases the SPY at the beginning period and holds it to the end """
-    return buy_and_hold_single_asset(asset_universe, begin_date, end_date, "SPY", fcalendar)
+    return buy_and_hold_single_asset(asset_factory, begin_date, end_date, "SPY", fcalendar)
 
-def buy_and_hold_stocks_and_bonds(asset_universe, begin_date, end_date, fcalendar):
+def buy_and_hold_stocks_and_bonds(asset_factory, begin_date, end_date, fcalendar):
     """ Purchases 80% SPY and 20% LQD """
-    return buy_and_hold_multi_asset(asset_universe, begin_date, end_date, ["SPY", "LQD"], [.8, .2], fcalendar)
+    return buy_and_hold_multi_asset(asset_factory, begin_date, end_date, ["SPY", "LQD"], [.8, .2], fcalendar)
 
 def v1_baseline():
     """ Builds a strategy that is currently the best of breed as of Oct 26 2014. This is a 20% stocks, 80% bonds
@@ -245,7 +245,7 @@ def v1_baseline():
     end = datetime.datetime(2012, 12, 31)
     calendar = furnace.data.fcalendar.make_fcalendar(datetime.datetime(2000, 1, 1))
     data_cache = furnace.data.yahoo.load_pandas()
-    asset_factory = furnace.data.asset.AssetUniverse(["SPY", "LQD"], data_cache, calendar)
+    asset_factory = furnace.data.asset.AssetFactory(["SPY", "LQD"], data_cache, calendar)
 
     strategy = ndays_rebalance_multi_asset(asset_factory, calendar, ["SPY", "LQD"], [.2, .8], 25)
     return strategy.performance_during(begin, end)

@@ -16,7 +16,7 @@ def test_main():
     #TODO: add factory function to asset factory that automatically loads the data cache.
     #can make a singleton of it
     data_cache = furnace.data.yahoo.load_pandas()
-    asset_factory = furnace.data.asset.AssetUniverse(["SPY", "LQD"], data_cache, calendar)
+    asset_factory = furnace.data.asset.AssetFactory(["SPY", "LQD"], data_cache, calendar)
 
 
     #NOTE: don't start earlier - dividends begin in february but our data set goes back to jan. Either get earlier

@@ -57,9 +57,7 @@ def test_number_of_trades_buyhold():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    asset_factory = make_default_asset_factory(["SPY"])
-
-    buy_and_hold = strategy.buy_and_hold_single_asset(asset_factory, begin, end, "SPY", CALENDAR)
+    buy_and_hold = strategy.buy_and_hold_single_asset(DEFAULT_ASSET_FACTORY, begin, end, "SPY", CALENDAR)
 
     buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
 
@@ -70,8 +68,7 @@ def test_number_of_trades_ndaily():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    asset_factory = make_default_asset_factory(["SPY"])
-    rebalanced = strategy.ndays_rebalance_single_asset(asset_factory, CALENDAR, "SPY", 10)
+    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 10)
 
     rebalanced_perf = rebalanced.performance_during(begin, end)
 

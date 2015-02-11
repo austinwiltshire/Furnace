@@ -6,25 +6,25 @@ import datetime
 import itertools
 import furnace.data.fcalendar
 
-def make_overall_performance(portfolio_periods, asset_universe):
+def make_overall_performance(portfolio_periods, asset_factory):
     """ Factory function to create overall performances """
 
     table = pandas.DataFrame()
     table["Daily Returns"] = pandas.concat(period.daily_returns() for period in portfolio_periods)
     table["Cumulative Returns"] = ((table["Daily Returns"] + 1.0).cumprod() - 1.0)
 
-    return OverallPerformance(portfolio_periods, asset_universe, table)
+    return OverallPerformance(portfolio_periods, asset_factory, table)
 
 class OverallPerformance(object):
     """ OverallPerformance is how a strategy does over time. """
 
-    def __init__(self, portfolio_periods, asset_universe, table):
+    def __init__(self, portfolio_periods, asset_factory, table):
         """ Currently expects a dict of dates to portfolios. Period performances are inclusive of end
         dates and exclusive of begin dates. That means altogether, they're inclusive of the entire trading
         period and it's end and exclusive of it's end. We have a single special case to handle that in
         overall performance. """
         self._portfolio_periods = portfolio_periods
-        self._asset_universe = asset_universe
+        self._asset_factory = asset_factory
         self._table = table
 
         self.__invariant()
@@ -104,7 +104,7 @@ class OverallPerformance(object):
     def number_of_trades(self):
         """ Simple turnover metric - an estimate of the number of trades we make """
         self.__invariant()
-        return len(self._portfolio_periods) * self._asset_universe.cardinality()
+        return len(self._portfolio_periods) * self._asset_factory.cardinality()
 
 def make_period_performance(begin_date, end_date, index):
     """ Factory for a period performance object """

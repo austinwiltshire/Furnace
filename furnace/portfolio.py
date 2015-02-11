@@ -14,7 +14,7 @@ class PortfolioOptimizer(object):
 #NOTE: do not add asset universe as an init param - strategy ensures that the same asset universe is passed in to
 #portfolio optimizer and weatherman
     @abc.abstractmethod
-    def optimize(self, forecasts, asset_universe):
+    def optimize(self, forecasts, asset_factory):
         """ Forecasts need to be able to back point to their asset class and thus implicitly define
         the asset universe """
         pass
@@ -27,10 +27,10 @@ class SingleAsset(PortfolioOptimizer):
     def __init__(self, asset):
         self._asset = asset
 
-    def optimize(self, _, asset_universe):
+    def optimize(self, _, asset_factory):
         """ We hold 100% of one asset """
-#        assert asset_universe.cardinality() == 1
-#        asset = [symbol for symbol in asset_universe.symbols()][0]
+#        assert asset_factory.cardinality() == 1
+#        asset = [symbol for symbol in asset_factory.symbols()][0]
         return Weightings([Weighting(self._asset, 1.0)])
 #pylint: enable=R0903
 
@@ -41,7 +41,7 @@ class StaticTarget(PortfolioOptimizer):
     def __init__(self, target):
         self._target = target
 
-    def optimize(self, _, asset_universe):
+    def optimize(self, _, asset_factory):
         """ We flat out ignore the forecaster argument """
         return self._target
 #pylint: enable=R0903
@@ -59,10 +59,10 @@ class ProportionalWeighting(PortfolioOptimizer):
 
     #TODO: this function is very slow. unsure what to do to speed it up.
     #TODO: clean up the caching of assets, have symbols passed in as assets
-    def optimize(self, forecast, asset_universe):
+    def optimize(self, forecast, asset_factory):
         """ Ignore forecaster for now. """
         if(not self._assets):
-            self._assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
+            self._assets = [asset_factory.make_asset(symbol) for symbol in self._symbols]
 
         sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in self._assets])
 
@@ -75,8 +75,8 @@ class AntiProportionalWeighting(PortfolioOptimizer):
     def __init__(self, symbols):
         self._symbols = symbols
 
-    def optimize(self, forecast, asset_universe):
-        assets = [asset_universe.make_asset(symbol) for symbol in self._symbols]
+    def optimize(self, forecast, asset_factory):
+        assets = [asset_factory.make_asset(symbol) for symbol in self._symbols]
         sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in assets])
 
         #NOTE: we fallback to an equal weight proportion in the case that all sharpe ratios are negative

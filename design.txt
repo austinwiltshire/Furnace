@@ -1,9 +1,53 @@
 FEATURES:
 
 * Critical Path:
-** Imminent (Version 2):
+** WIP
 
-DONE:
+1.1 fix performance.py number_of_trades
+1.1.1 rename asset universe to asset factory
+
+** Imminent (Version 3):
+
+1. add in commissions calculation for overall performance and redo daily rebalance experiment
+1.2 redo daily balance experiment
+2. feature engineering using linear model
+2.1 daily lags (try multiple days up to 5)
+2.2 weekly lags (week 1 and week 1 minus day1 for comparison)
+2.3 monthly lags (month 1 and month 1 minus week1, we'll do straight trading day months of 25)
+2.4 yearly lags (month 2-12)
+2.5 RSI
+2.6 IBS
+2.7 moving averages
+2.7.1 above / below 5 dummy, above / below 25, above / below 252 dummy
+2.7.2 is 5 above below 25 dummy, etc
+2.7.3 replace dummy's with % above below
+(NOTE): no interactions for now
+2.8 ARMA of daily's (on its own)
+2.9 cross correlate the etfs, previous day oil,reit,etc predict next day's spy?
+2.10 ENSEMBLE arma and linear model together, try the max risk min return rule?
+tag v3
+
+** Anticipated:
+*** add max drawdown to performance
+*** add comissions handling
+*** expected return between two dates, including dates that we havent' calculated yet for forecasting (on overall performance, or strategy)
+*** plot portfolio - like plot index but takes a value and accounts for comissions in absolute terms (overall performance)
+*** Add precious metals index
+*** Manufacture volatility strategy - should I trade vixx or make my own iron condors?
+*** Add real portfolio optimization with correlations
+*** calculate true sharpe by adjusting returns and volatility by returns and volatility of the risk free asset
+*** ./furnace/strategy.py:64: #TODO: should forecast be similar to asset universe, except it also provides expectations on those assets?
+*** add volatility model
+
+* Bells and Whistles
+** add in metadata to allow for readable debugging and plots? i..e, be nice if the plot auto-named it as "Total return of Buy-And-Hold Single Asset with historical forecast on SPY"
+   could take in metadata from portfolio strategy (buy and hold single asset), forecast (historical forecast) and asset universe (spy). probably also rebalance rule
+
+* Tabled
+** panels for different stocks?
+** accrue dividends if you create cap gains models separate from dividends.
+
+* DONE
 *** 1. add helper function for current baseline - 20% stocks or whever i decided on. that way i can easily compare new strategies cagr/simple sharpe
 *** 2. Create portfolio that weights based on proportional simplified sharpes (no correlation) (compare spy & bonds to baseline, then add new assets to reconfirm)
 *** 2.1 Use total period cagr and simple sharpe for now.
@@ -52,46 +96,6 @@ just to check, i ran an ARMA on daily returns and was able to pull out useful si
 version 2.1
 2 weeks time box of cleaning things up
 
-goals for v3:
-
-1. add in commissions calculation for overall performance and redo daily rebalance experiment
-1.1 fix performance.py number_of_trades
-2. feature engineering using linear model
-2.1 daily lags (try multiple days up to 5)
-2.2 weekly lags (week 1 and week 1 minus day1 for comparison)
-2.3 monthly lags (month 1 and month 1 minus week1, we'll do straight trading day months of 25)
-2.4 yearly lags (month 2-12)
-2.5 RSI
-2.6 IBS
-2.7 moving averages
-2.7.1 above / below 5 dummy, above / below 25, above / below 252 dummy
-2.7.2 is 5 above below 25 dummy, etc
-2.7.3 replace dummy's with % above below
-(NOTE): no interactions for now
-2.8 ARMA of daily's (on its own)
-2.9 cross correlate the etfs, previous day oil,reit,etc predict next day's spy?
-2.10 ENSEMBLE arma and linear model together, try the max risk min return rule?
-tag v3
-
-** Anticipated:
-*** add max drawdown to performance
-*** add comissions handling
-*** expected return between two dates, including dates that we havent' calculated yet for forecasting (on overall performance, or strategy)
-*** plot portfolio - like plot index but takes a value and accounts for comissions in absolute terms (overall performance)
-*** Add precious metals index
-*** Manufacture volatility strategy - should I trade vixx or make my own iron condors?
-*** Add real portfolio optimization with correlations
-*** calculate true sharpe by adjusting returns and volatility by returns and volatility of the risk free asset
-*** ./furnace/strategy.py:64: #TODO: should forecast be similar to asset universe, except it also provides expectations on those assets?
-*** add volatility model
-
-* Bells and Whistles
-** add in metadata to allow for readable debugging and plots? i..e, be nice if the plot auto-named it as "Total return of Buy-And-Hold Single Asset with historical forecast on SPY"
-   could take in metadata from portfolio strategy (buy and hold single asset), forecast (historical forecast) and asset universe (spy). probably also rebalance rule
-
-* Tabled
-** panels for different stocks?
-** accrue dividends if you create cap gains models separate from dividends.
 
 PRODUCTIVITY:
 
