@@ -11,8 +11,8 @@ def test_period_average():
     period = 25
     spy = DEFAULT_ASSET_FACTORY.make_asset("SPY")
 
-    weatherman = weathermen.PeriodAverage(CALENDAR)
-    forecast = weatherman.forecast(DEFAULT_ASSET_FACTORY, time_point, period)
+    weatherman = weathermen.period_average(CALENDAR)
+    forecast = weatherman(DEFAULT_ASSET_FACTORY, time_point, period)
 
     assert is_close(forecast.cagr(spy), .152)
 
@@ -24,8 +24,8 @@ def test_simple_autocorr():
     period = 25
     spy = DEFAULT_ASSET_FACTORY.make_asset("SPY")
 
-    test_weatherman = weathermen.SimpleLinear(CALENDAR, spy)
-    forecast = test_weatherman.forecast(DEFAULT_ASSET_FACTORY, time_point, period)
+    test_weatherman = weathermen.simple_linear(CALENDAR, spy)
+    forecast = test_weatherman(DEFAULT_ASSET_FACTORY, time_point, period)
 
     assert is_close(forecast.cagr(spy), 0.0958)
 
@@ -39,15 +39,15 @@ def test_asset_specific():
     lqd = DEFAULT_ASSET_FACTORY.make_asset("LQD")
     uup = DEFAULT_ASSET_FACTORY.make_asset("UUP")
 
-    spy_weatherman = weathermen.SimpleLinear(CALENDAR, spy)
+    spy_weatherman = weathermen.simple_linear(CALENDAR, spy)
 
     #The simple linear forecaster is actually really bad for lqd
-    lqd_weatherman = weathermen.SimpleLinear(CALENDAR, lqd)
-    uup_weatherman = weathermen.SimpleLinear(CALENDAR, uup)
+    lqd_weatherman = weathermen.simple_linear(CALENDAR, lqd)
+    uup_weatherman = weathermen.simple_linear(CALENDAR, uup)
 
     forecasts_dictionary = {spy: spy_weatherman, lqd: lqd_weatherman, uup: uup_weatherman}
-    test_weatherman = weathermen.AssetSpecific(forecasts_dictionary)
-    forecast = test_weatherman.forecast(DEFAULT_ASSET_FACTORY, time_point, period)
+    test_weatherman = weathermen.asset_specific(forecasts_dictionary)
+    forecast = test_weatherman(DEFAULT_ASSET_FACTORY, time_point, period)
 
     assert is_close(forecast.cagr(spy), 0.09580)
     assert is_close(forecast.cagr(lqd), 0.07035)

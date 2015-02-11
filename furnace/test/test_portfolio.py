@@ -72,7 +72,7 @@ def test_proportional_weighting():
 
     portfolio_opt = portfolio.ProportionalWeighting(["SPY", "LQD"])
     weightings = portfolio_opt.optimize(
-            weathermen.HistoricalAverage.Forecast(DEFAULT_ASSET_FACTORY), DEFAULT_ASSET_FACTORY
+            weathermen.HistoricalAverage(DEFAULT_ASSET_FACTORY), DEFAULT_ASSET_FACTORY
     )
 
     spy = DEFAULT_ASSET_FACTORY.make_asset("SPY")

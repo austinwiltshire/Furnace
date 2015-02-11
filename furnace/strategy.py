@@ -63,7 +63,7 @@ class Strategy(object):
 
     def forecast(self, date):
         """ Generate a forecast for this strategy """
-        return self._forecaster.forecast(self._asset_universe, date, self._rebalancing_rule.period_length())
+        return self._forecaster(self._asset_universe, date, self._rebalancing_rule.period_length())
 
     def target_weighting_on(self, date):
         """ Generates a target portfolio this strategy would recommend for date """
@@ -163,7 +163,7 @@ def buy_and_hold_single_asset(asset_universe, begin_date, end_date, symbol, fcal
     return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
                     BuyAndHold(begin_date, end_date, fcalendar),
-                    weathermen.NullForecaster())
+                    weathermen.null_forecaster())
 
 #TODO: i hate these methods but i'm not sure how to avoid them.
 #I'd like to pull any of their uses out of anything but test_strategy subsidiaries,
@@ -182,7 +182,7 @@ def buy_and_hold_multi_asset(asset_universe, begin_date, end_date, symbols, weig
     return Strategy(portfolio.StaticTarget(weightings),
                     asset_universe,
                     BuyAndHold(begin_date, end_date, fcalendar),
-                    weathermen.NullForecaster())
+                    weathermen.null_forecaster())
 
 def yearly_rebalance_single_asset(asset_universe, fcalendar, symbol):
     """ A single asset that is rebalanced. This is a no-op strategy used for testing """
@@ -192,7 +192,7 @@ def yearly_rebalance_single_asset(asset_universe, fcalendar, symbol):
     return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
                     AnnualRebalance(fcalendar),
-                    weathermen.NullForecaster())
+                    weathermen.null_forecaster())
 
 def yearly_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights):
     """ An annually rebalanced multi asset portfolio with static targets. """
@@ -204,7 +204,7 @@ def yearly_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights):
     return Strategy(portfolio.StaticTarget(weightings),
                     asset_universe,
                     AnnualRebalance(fcalendar),
-                    weathermen.NullForecaster())
+                    weathermen.null_forecaster())
 
 def ndays_rebalance_single_asset(asset_universe, fcalendar, symbol, days):
     """ A single asset that is rebalanced. This is a no-op strategy used for testing """
@@ -214,7 +214,7 @@ def ndays_rebalance_single_asset(asset_universe, fcalendar, symbol, days):
     return Strategy(portfolio.SingleAsset(asset_universe.make_asset(symbol)),
                     asset_universe,
                     NDayRebalance(fcalendar, days),
-                    weathermen.NullForecaster())
+                    weathermen.null_forecaster())
 
 def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, days):
     """ A multi asset portfolio that is rebalanced every n days """
@@ -227,7 +227,7 @@ def ndays_rebalance_multi_asset(asset_universe, fcalendar, symbols, weights, day
     return Strategy(portfolio.StaticTarget(weightings),
                     asset_universe,
                     NDayRebalance(fcalendar, days),
-                    weathermen.NullForecaster())
+                    weathermen.null_forecaster())
 
 def buy_and_hold_stocks(asset_universe, begin_date, end_date, fcalendar):
     """ Purchases the SPY at the beginning period and holds it to the end """

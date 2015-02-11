@@ -34,7 +34,7 @@ def test_proportional_portfolio():
         portfolio.ProportionalWeighting(["SPY", "LQD"]),
         DEFAULT_ASSET_FACTORY,
         strategy.NDayRebalance(CALENDAR, 25),
-        weathermen.HistoricalAverage()
+        weathermen.historical_average()
     )
 
     perf = strat.performance_during(begin, end)
@@ -58,7 +58,7 @@ def test_period_average_reit():
         portfolio.ProportionalWeighting(["SPY", "LQD", "IYR"]),
         DEFAULT_ASSET_FACTORY,
         strategy.NDayRebalance(CALENDAR, 25),
-        weathermen.PeriodAverage(CALENDAR)
+        weathermen.period_average(CALENDAR)
     )
 
     perf = strat.performance_during(begin, end)
@@ -77,7 +77,7 @@ def test_period_average_currency():
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
         DEFAULT_ASSET_FACTORY,
         strategy.NDayRebalance(CALENDAR, 25),
-        weathermen.PeriodAverage(CALENDAR)
+        weathermen.period_average(CALENDAR)
     )
 
     perf = strat.performance_during(begin, end)
@@ -95,7 +95,7 @@ def test_currency_no_crash():
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
         DEFAULT_ASSET_FACTORY,
         strategy.NDayRebalance(CALENDAR, 25),
-        weathermen.PeriodAverage(CALENDAR)
+        weathermen.period_average(CALENDAR)
     )
 
     perf = strat.performance_during(begin, end)
@@ -103,7 +103,7 @@ def test_currency_no_crash():
     assert is_close(perf.cagr(), 0.098)
     assert is_close(perf.simple_sharpe(), 0.925)
 
-def test_simple_linear_specific():
+def test_linear_mix():
     """ UUP, LQD and SPY all using a simple linear regression per asset.
     Regression test"""
 
@@ -114,14 +114,14 @@ def test_simple_linear_specific():
     lqd = DEFAULT_ASSET_FACTORY.make_asset("LQD")
     uup = DEFAULT_ASSET_FACTORY.make_asset("UUP")
 
-    spy_weatherman = weathermen.SimpleLinear(CALENDAR, spy)
+    spy_weatherman = weathermen.simple_linear(CALENDAR, spy)
 
     #The simple linear forecaster is actually really bad for lqd, so we use historical
-    lqd_weatherman = weathermen.HistoricalAverage()
-    uup_weatherman = weathermen.SimpleLinear(CALENDAR, uup)
+    lqd_weatherman = weathermen.historical_average()
+    uup_weatherman = weathermen.simple_linear(CALENDAR, uup)
 
     forecasts_dictionary = {spy: spy_weatherman, lqd: lqd_weatherman, uup: uup_weatherman}
-    test_weatherman = weathermen.AssetSpecific(forecasts_dictionary)
+    test_weatherman = weathermen.asset_specific(forecasts_dictionary)
 
     strat = strategy.Strategy(
         portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
