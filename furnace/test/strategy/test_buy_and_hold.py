@@ -12,7 +12,8 @@ def test_stocks_bonds_cagr():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(universe, begin, end, CALENDAR)
 
     performance_ = test_strategy.performance_during(begin, end)
 
@@ -26,7 +27,8 @@ def test_stocks_bonds_growth_by():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(universe, begin, end, CALENDAR)
 
     performance_ = test_strategy.performance_during(begin, end)
 

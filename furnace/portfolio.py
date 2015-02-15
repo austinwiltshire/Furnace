@@ -3,6 +3,7 @@
 import abc
 import pandas
 import numpy
+import functools
 
 # pylint: disable=R0903
 #NOTE: too few public methods
@@ -49,26 +50,22 @@ class StaticTarget(PortfolioOptimizer):
 class ProportionalWeighting(PortfolioOptimizer):
     """ Optimizes portfolio by assigning proportionally larger weights to members that offer greater simple sharpe
     ratios based on total asset history
-    
-    This portfolio does not support short positions and simply exits any potential negative sharpe ratio 
+
+    This portfolio does not support short positions and simply exits any potential negative sharpe ratio
     positions. If all forecasts are negative, it holds an equal weight portfolio """
-    def __init__(self, symbols):
-        self._symbols = symbols
-        self._assets = None
-        self._num_assets = len(symbols)
+    def __init__(self, universe):
+        self._universe = universe
 
     #TODO: this function is very slow. unsure what to do to speed it up.
-    #TODO: clean up the caching of assets, have symbols passed in as assets
     def optimize(self, forecast, asset_factory):
         """ Ignore forecaster for now. """
-        if(not self._assets):
-            self._assets = [asset_factory.make_asset(symbol) for symbol in self._symbols]
+        num_assets = self._universe.cardinality()
 
-        sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in self._assets])
+        sharpes = numpy.array([max(forecast.simple_sharpe(asset), 0.0) for asset in self._universe])
 
         #NOTE: we fallback to an equal weight proportion in the case that all sharpe ratios are negative
-        weights = sharpes / sharpes.sum() if sharpes.sum() > 0.0 else numpy.ones(self._num_assets) / self._num_assets
-        return Weightings([Weighting(asset, weight) for asset, weight in zip(self._assets, weights)])
+        weights = sharpes / sharpes.sum() if sharpes.sum() > 0.0 else numpy.ones(num_assets) / num_assets
+        return Weightings([Weighting(asset, weight) for asset, weight in zip(self._universe, weights)])
 
 class AntiProportionalWeighting(PortfolioOptimizer):
     """ A stand in for basically shorting all the forecasts I'm given """
@@ -89,7 +86,7 @@ class Weightings(object):
     def __init__(self, weightings):
         """ Takes in a list of Weighting objects """
         assert numpy.isclose(sum(weighting.weight() for weighting in weightings), 1.0)
-        self._weightings = weightings
+        self._weightings = sorted(weightings)
 
     def __iter__(self):
         """ Iterate over the weights """
@@ -110,6 +107,7 @@ class Weightings(object):
         return Index(index_value, self, begin_date)
 # pylint: enable=R0903
 
+@functools.total_ordering
 class Weighting(object):
     """ Represents a weight of an asset in a broader weighting scheme.
     Could potentially support negative (short) and margin weights """
@@ -137,6 +135,9 @@ class Weighting(object):
 
     def __repr__(self):
         return "<Weighting: " + str(self.asset()) + " at " + str(self.weight()) + "%>"
+
+    def __lt__(self, other):
+        return  (self.asset(), self.weight()) < (other.asset(), other.weight())
 
 # pylint: disable=R0903
 #NOTE: too few public methods

@@ -10,8 +10,10 @@ def test_perf_eq_buy_and_hold():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    reference = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
-    rebalanced = strategy.yearly_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY")
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+
+    reference = strategy.buy_and_hold_stocks(universe, begin, end, CALENDAR)
+    rebalanced = strategy.yearly_rebalance_single_asset(universe, CALENDAR, "SPY")
 
     periods = list(rebalanced.periods_during(begin, end))
     first_start = periods[0].begin()
@@ -42,7 +44,9 @@ def test_first_day():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    rebalanced = strategy.yearly_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY")
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+
+    rebalanced = strategy.yearly_rebalance_single_asset(universe, CALENDAR, "SPY")
 
     periods = list(rebalanced.periods_during(begin, end))
     first_start = periods[0].begin()

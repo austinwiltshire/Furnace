@@ -12,13 +12,13 @@ def is_close(val, other_val):
         A relative difference of 3 usually is 'close enough' given that we check against yahoo data a lot """
     return numpy.isclose(val, other_val, rtol=1e-03)
 
-def make_default_asset_factory(symbols):
+def make_default_asset_factory():
     """ Helper method returns an asset factory for a list of symbols with a calendar starting at 2000-1-1 """
 
     data_cache = yahoo.load_pandas()
-    return asset.AssetFactory(symbols, data_cache, CALENDAR)
+    return asset.Factory(data_cache, CALENDAR)
 
-DEFAULT_ASSET_FACTORY = make_default_asset_factory(["SPY", "LQD", "IYR", "GSG", "UUP", "SHV"])
+DEFAULT_ASSET_FACTORY = make_default_asset_factory()
 
 def compound_growth(*returns):
     """ Returns the compound return of the associated individual returns """

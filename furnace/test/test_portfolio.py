@@ -70,7 +70,9 @@ def test_proportional_weighting():
     """ Test the proportional weighting portfolio optimization strategy. Weights based on forecasts' idea of simple
     sharpe proportionally """
 
-    portfolio_opt = portfolio.ProportionalWeighting(["SPY", "LQD"])
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+
+    portfolio_opt = portfolio.ProportionalWeighting(universe)
     weightings = portfolio_opt.optimize(
             weathermen.HistoricalAverage(DEFAULT_ASSET_FACTORY), DEFAULT_ASSET_FACTORY
     )

@@ -10,7 +10,9 @@ def test_count_days_abs():
     begin = datetime(2012, 1, 3)
     end = datetime(2012, 1, 31)
 
-    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 2)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+
+    rebalanced = strategy.ndays_rebalance_single_asset(universe, CALENDAR, "SPY", 2)
 
     periods = list(rebalanced.periods_during(begin, end))
 

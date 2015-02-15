@@ -11,7 +11,9 @@ def test_cagr():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    test_strategy = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+
+    test_strategy = strategy.buy_and_hold_stocks(universe, begin, end, CALENDAR)
     performance_ = test_strategy.performance_during(begin, end)
 
     assert is_close(performance_.cagr(), 0.0667)
@@ -22,7 +24,8 @@ def test_growth_by():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    test_strategy = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+    test_strategy = strategy.buy_and_hold_stocks(universe, begin, end, CALENDAR)
 
     performance_ = test_strategy.performance_during(begin, end)
 
@@ -36,7 +39,8 @@ def test_volatility():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    test_strategy = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+    test_strategy = strategy.buy_and_hold_stocks_and_bonds(universe, begin, end, CALENDAR)
 
     performance_ = test_strategy.performance_during(begin, end)
 
@@ -46,7 +50,8 @@ def test_simple_sharpe():
     """ Regression test of simplified sharpe ratio """
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 10)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+    rebalanced = strategy.ndays_rebalance_single_asset(universe, CALENDAR, "SPY", 10)
 
     rebalanced_perf = rebalanced.performance_during(begin, end)
 
@@ -57,7 +62,8 @@ def test_number_of_trades_buyhold():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    buy_and_hold = strategy.buy_and_hold_single_asset(DEFAULT_ASSET_FACTORY, begin, end, "SPY", CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+    buy_and_hold = strategy.buy_and_hold_single_asset(universe, begin, end, "SPY", CALENDAR)
 
     buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
 
@@ -68,7 +74,8 @@ def test_number_of_trades_ndaily():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 10)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+    rebalanced = strategy.ndays_rebalance_single_asset(universe, CALENDAR, "SPY", 10)
 
     rebalanced_perf = rebalanced.performance_during(begin, end)
 

@@ -30,9 +30,11 @@ def test_proportional_portfolio():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+
     strat = strategy.Strategy(
-        portfolio.ProportionalWeighting(["SPY", "LQD"]),
-        DEFAULT_ASSET_FACTORY,
+        portfolio.ProportionalWeighting(universe),
+        universe,
         strategy.NDayRebalance(CALENDAR, 25),
         weathermen.historical_average()
     )
@@ -54,9 +56,11 @@ def test_period_average_reit():
     begin = datetime(2004, 1, 2)
     end = datetime(2012, 12, 31)
 
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD", "IYR"])
+
     strat = strategy.Strategy(
-        portfolio.ProportionalWeighting(["SPY", "LQD", "IYR"]),
-        DEFAULT_ASSET_FACTORY,
+        portfolio.ProportionalWeighting(universe),
+        universe,
         strategy.NDayRebalance(CALENDAR, 25),
         weathermen.period_average(CALENDAR)
     )
@@ -73,9 +77,11 @@ def test_period_average_currency():
     begin = datetime(2007, 5, 1)
     end = datetime(2012, 12, 31)
 
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD", "UUP"])
+
     strat = strategy.Strategy(
-        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        DEFAULT_ASSET_FACTORY,
+        portfolio.ProportionalWeighting(universe),
+        universe,
         strategy.NDayRebalance(CALENDAR, 25),
         weathermen.period_average(CALENDAR)
     )
@@ -91,9 +97,11 @@ def test_currency_no_crash():
     begin = datetime(2009, 3, 2)
     end = datetime(2012, 12, 31)
 
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD", "UUP"])
+
     strat = strategy.Strategy(
-        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        DEFAULT_ASSET_FACTORY,
+        portfolio.ProportionalWeighting(universe),
+        universe,
         strategy.NDayRebalance(CALENDAR, 25),
         weathermen.period_average(CALENDAR)
     )
@@ -123,9 +131,11 @@ def test_linear_mix():
     forecasts_dictionary = {spy: spy_weatherman, lqd: lqd_weatherman, uup: uup_weatherman}
     test_weatherman = weathermen.asset_specific(forecasts_dictionary)
 
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD", "UUP"])
+
     strat = strategy.Strategy(
-        portfolio.ProportionalWeighting(["SPY", "LQD", "UUP"]),
-        DEFAULT_ASSET_FACTORY,
+        portfolio.ProportionalWeighting(universe),
+        universe,
         strategy.NDayRebalance(CALENDAR, 25),
         test_weatherman
     )

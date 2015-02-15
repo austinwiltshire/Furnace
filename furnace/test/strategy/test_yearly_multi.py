@@ -10,7 +10,9 @@ def test_multi_asset_yearly_hand():
     begin = datetime(2003, 1, 2)
     end = datetime(2007, 1, 3)
 
-    test_strategy = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+
+    test_strategy = strategy.yearly_rebalance_multi_asset(universe, CALENDAR, {"SPY": .8, "LQD": .2})
 
     performance_ = test_strategy.performance_during(begin, end)
 
@@ -21,8 +23,9 @@ def test_single_asset_yearly():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    rebalanced = strategy.yearly_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY")
-    buy_and_hold = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+    rebalanced = strategy.yearly_rebalance_single_asset(universe, CALENDAR, "SPY")
+    buy_and_hold = strategy.buy_and_hold_stocks(universe, begin, end, CALENDAR)
 
     rebalanced_perf = rebalanced.performance_during(begin, end)
     buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
@@ -40,12 +43,13 @@ def test_multi_asset_yearly():
     year_2005 = datetime(2005, 1, 3)
     year_2006 = datetime(2006, 1, 3)
 
-    test_strategy = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+    test_strategy = strategy.yearly_rebalance_multi_asset(universe, CALENDAR, {"SPY": .8, "LQD": .2})
     performance_ = test_strategy.performance_during(year_2003, year_2006)
 
     def get_buy_and_hold_perf(begin, end):
         """ Helper to get buy and hold strategy performance over a period """
-        strat = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+        strat = strategy.buy_and_hold_stocks_and_bonds(universe, begin, end, CALENDAR)
         return strat.performance_during(begin, end).growth_by(end)
 
     year_1_perf = get_buy_and_hold_perf(year_2003, year_2004)
@@ -63,8 +67,9 @@ def test_multi_asset_yearly_uneq():
     begin = datetime(2003, 1, 2)
     end = datetime(2006, 1, 3)
 
-    rebalance = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
-    buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+    rebalance = strategy.yearly_rebalance_multi_asset(universe, CALENDAR, {"SPY": .8, "LQD": .2})
+    buy_and_hold = strategy.buy_and_hold_stocks_and_bonds(universe, begin, end, CALENDAR)
 
     rebalance_perf = rebalance.performance_during(begin, end)
     buy_and_hold_perf = buy_and_hold.performance_during(begin, end)

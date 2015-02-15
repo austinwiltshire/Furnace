@@ -5,6 +5,7 @@
 
 from furnace.data import fcalendar
 import numpy
+import functools
 
 def growth(begin, end):
     """ Calculates the percent growth between two values """
@@ -23,34 +24,60 @@ def adjust_period(rate, original_period, new_period):
     daily_rate = pow(1.0 + rate, 1.0 / original_period) - 1.0
     return pow(daily_rate + 1.0, new_period) - 1.0
 
-#TODO: split below into an asset factory and asset universe. The factory just provides access to the 
-#asset files via various loading schemes like yahoo. The universe actually represents a small set of assets
-#a particular model will trade
+#TODO: what does this class actually offer over a dictionary?
+class Universe(object):
+    """ Represents a subset of tradable assets narrowed down for any particular strategy """
+    def __init__(self, assets, factory):
+        self._assets = dict((asset.symbol(), asset) for asset in assets)
+        self._factory = factory
+
+    def __getitem__(self, symbol):
+        """ Grabs one of our assets based on the symbol """
+        assert self.supports_symbol(symbol)
+        return self._assets[symbol]
+
+    def cardinality(self):
+        """ Returns the size of this asset universe """
+        return len(self._assets)
+
+    #TODO: should our asset factory pass us the calendar directly and we query it rather than 
+    #supporting this pass through function?
+    #TODO: should we have some sort of idea of a combined factory-calendar or universe-calendar that
+    #performs these queries rather than expecting just a plain factory/universe to do it?
+    def supports_symbol(self, symbol):
+        """ Returns true if this symbol is in the tradable universe """
+        return symbol in self._assets.keys()
+
+    def supports_date(self, date):
+        """ Returns true if the underlying factory supports the date """
+        return self._factory.supports_date(date)
+
+
+    def __iter__(self):
+        """ Iterates through all assets """
+        return self._assets.itervalues()
+
 #NOTE: data_cache is expected to be eager loaded (current design, anyway)
-class AssetFactory(object):
+class Factory(object):
     """ Represents all tradable assets loaded """
-    def __init__(self, supported_symbols, data_cache, calendar):
+    def __init__(self, data_cache, calendar):
         self._data_cache = data_cache
         self._calendar = calendar
-        self._supported_symbols = set(supported_symbols)
 
     def make_asset(self, symbol):
         """ Creates an asset based on the ticker symbol """
-        assert symbol in self._supported_symbols
+        assert symbol in self._data_cache.keys()
         return Asset(symbol, self._data_cache[symbol], self._calendar)
 
     def supports_date(self, date_):
         """ Predicate on whether this asset universe can support the date passed in """
         return date_ in self._calendar
 
-    def supports_symbol(self, symbol):
-        """ Predicate on whether symbol is in this asset universe """
-        return symbol in self._supported_symbols
+    def make_universe(self, symbols):
+        """ Returns a universe of tradable assets restricted to those passed in """
+        return Universe((self.make_asset(symbol) for symbol in symbols), self)
 
-    def cardinality(self):
-        """ Returns the size of this asset universe """
-        return len(self._supported_symbols)
-
+@functools.total_ordering
 class Asset(object):
     """ Represents a tradable security, by symbol, over a period of time """
     def __init__(self, symbol, table, calendar):
@@ -114,6 +141,11 @@ class Asset(object):
 
         return numpy.sqrt(fcalendar.trading_days_in_year()*variance)
 
+    #TODO: reevaluate when comissions are in to see if this can be taken back out
+    def symbol(self):
+        """ Getter for this assets symbol """
+        return self._symbol
+
     #TODO: hand test this for spy
     def simple_sharpe(self, begin_date, end_date):
         """ Returns the simplified sharpe ratio of this asset over the entire data period """
@@ -136,6 +168,12 @@ class Asset(object):
         return hash(self._symbol)
 
     def __repr__(self):
-        return "Asset with Symbol: {1}".format([self._symbol])
+        return "Asset {0}".format([self._symbol])
+
+    #TODO: currently just compare symbol, need to ensure things came from the same factory
+    #and support the same dates
+    def __lt__(self, rhs):
+        return self._symbol < rhs.symbol()
+
 
 

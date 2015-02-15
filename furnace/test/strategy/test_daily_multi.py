@@ -9,8 +9,11 @@ def test_daily_yearly_eq():
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
 
-    daily = strategy.ndays_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2], 252)
-    yearly = strategy.yearly_rebalance_multi_asset(DEFAULT_ASSET_FACTORY, CALENDAR, ["SPY", "LQD"], [.8, .2])
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY", "LQD"])
+
+    weightings = {"SPY": .8, "LQD": .2}
+    daily = strategy.ndays_rebalance_multi_asset(universe, CALENDAR, weightings, 252)
+    yearly = strategy.yearly_rebalance_multi_asset(universe, CALENDAR, weightings)
 
     daily_performance = daily.performance_during(begin, end)
     yearly_performance = yearly.performance_during(begin, end)
@@ -23,8 +26,9 @@ def test_single_yearly_daily():
 
     begin = datetime(2003, 1, 2)
     end = datetime(2012, 12, 31)
-    rebalanced = strategy.ndays_rebalance_single_asset(DEFAULT_ASSET_FACTORY, CALENDAR, "SPY", 10)
-    buy_and_hold = strategy.buy_and_hold_stocks(DEFAULT_ASSET_FACTORY, begin, end, CALENDAR)
+    universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
+    rebalanced = strategy.ndays_rebalance_single_asset(universe, CALENDAR, "SPY", 10)
+    buy_and_hold = strategy.buy_and_hold_stocks(universe, begin, end, CALENDAR)
 
     rebalanced_perf = rebalanced.performance_during(begin, end)
     buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
