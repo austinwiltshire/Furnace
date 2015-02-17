@@ -153,14 +153,15 @@ class NDayRebalance(RebalancingRule):
 
 #TODO: look at eliminating most of these and decomposing common helpers out of them, DRY this up
 #family strategies
-def buy_and_hold_single_asset(universe, begin_date, end_date, symbol, fcalendar):
+def buy_and_hold_single_asset(universe, begin_date, end_date, asset, fcalendar):
     """ Purchases a single asset at the beginning of the period and holds it to the end.
     Represents a family of potential strategies """
 
     assert universe.supports_date(begin_date)
-    assert universe.supports_symbol(symbol)
+    assert universe.cardinality() == 1
+    assert universe.supports_symbol(asset.symbol())
 
-    return Strategy(portfolio.SingleAsset(universe[symbol]),
+    return Strategy(portfolio.SingleAsset(asset),
                     universe,
                     BuyAndHold(begin_date, end_date, fcalendar),
                     weathermen.null_forecaster())
@@ -227,7 +228,8 @@ def ndays_rebalance_multi_asset(universe, fcalendar, weights, days):
 
 def buy_and_hold_stocks(universe, begin_date, end_date, fcalendar):
     """ Purchases the SPY at the beginning period and holds it to the end """
-    return buy_and_hold_single_asset(universe, begin_date, end_date, "SPY", fcalendar)
+    spy = universe["SPY"]
+    return buy_and_hold_single_asset(universe, begin_date, end_date, spy, fcalendar)
 
 def buy_and_hold_stocks_and_bonds(universe, begin_date, end_date, fcalendar):
     """ Purchases 80% SPY and 20% LQD """

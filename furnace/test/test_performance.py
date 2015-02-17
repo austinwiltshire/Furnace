@@ -63,7 +63,8 @@ def test_number_of_trades_buyhold():
     end = datetime(2012, 12, 31)
 
     universe = DEFAULT_ASSET_FACTORY.make_universe(["SPY"])
-    buy_and_hold = strategy.buy_and_hold_single_asset(universe, begin, end, "SPY", CALENDAR)
+    spy = universe["SPY"]
+    buy_and_hold = strategy.buy_and_hold_single_asset(universe, begin, end, spy, CALENDAR)
 
     buy_and_hold_perf = buy_and_hold.performance_during(begin, end)
 

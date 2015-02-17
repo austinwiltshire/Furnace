@@ -35,7 +35,8 @@ def test_real_estate():
     end = datetime(2012, 12, 31)
 
     universe = DEFAULT_ASSET_FACTORY.make_universe(["IYR"])
-    strat = strategy.buy_and_hold_single_asset(universe, begin, end, "IYR", CALENDAR)
+    iyr = universe['IYR']
+    strat = strategy.buy_and_hold_single_asset(universe, begin, end, iyr, CALENDAR)
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), 0.0954)
@@ -47,7 +48,8 @@ def test_money_market():
     end = datetime(2012, 12, 31)
 
     universe = DEFAULT_ASSET_FACTORY.make_universe(["SHV"])
-    strat = strategy.buy_and_hold_single_asset(universe, begin, end, "SHV", CALENDAR)
+    shv = universe['SHV']
+    strat = strategy.buy_and_hold_single_asset(universe, begin, end, shv, CALENDAR)
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), 0.0136)
@@ -63,7 +65,8 @@ def test_bull_dollar_currency():
     end = datetime(2012, 12, 31)
 
     universe = DEFAULT_ASSET_FACTORY.make_universe(["UUP"])
-    strat = strategy.buy_and_hold_single_asset(universe, begin, end, "UUP", CALENDAR)
+    uup = universe['UUP']
+    strat = strategy.buy_and_hold_single_asset(universe, begin, end, uup, CALENDAR)
     perf = strat.performance_during(begin, end)
 
     assert is_close(perf.cagr(), -0.0204)
