@@ -4,16 +4,75 @@ import numpy
 import pandas
 import datetime
 import itertools
+import re
 import furnace.data.fcalendar
+
+def reindex(table1, table2):
+    """ Reindexes table2 to have basis the same as end of table1. modifies it's second argument """
+    assert table1.ix[-1].name == table2.ix[0].name, "last index of table1 ought to be first of table2"
+
+    multiplier = table1.ix[-1]['index'] / table2.ix[0]['index']
+
+    #recalculate basis
+    new_basis = table2.filter(regex=".*_Basis") * multiplier
+
+    #reset table2's basis
+    for column in new_basis.columns:
+        table2[column] = new_basis[column]
+
+    #recalculate asset indecies
+    #TODO: consider renaming asset universe to basket
+    index_regex = re.compile("(?P<symbol>.*)_Index")
+    symbols = [
+        index_regex.match(column).group('symbol')
+        for column
+        in table2.filter(regex=".*_Index").columns
+    ]
+
+    symbols1 = [
+        index_regex.match(column).group('symbol')
+        for column
+        in table1.filter(regex=".*_Index").columns
+    ]
+
+    assert set(symbols) == set(symbols1), "Both tables should have same symbols"
+
+    for symbol in symbols:
+        table2[symbol + "_Index"] = table2[symbol + "_Basis"] * table2[symbol + "_AdjustedPrice"]
+
+    #recalculate portfolio index
+    table2["index"] = table2.filter(regex=".*_Index").sum(axis=1)
+
+    #returns second arg for convenience
+    return table2
 
 def make_overall_performance(portfolio_periods, asset_factory):
     """ Factory function to create overall performances """
 
-    table = pandas.DataFrame()
-    table["Daily Returns"] = pandas.concat(period.daily_returns() for period in portfolio_periods)
-    table["Cumulative Returns"] = ((table["Daily Returns"] + 1.0).cumprod() - 1.0)
+    #group periods into pairs to reindex the latter on the former
+    period_pairs = zip(portfolio_periods[:-1], portfolio_periods[1:])
+    assert all(period_pair[0].end() == period_pair[1].begin() for period_pair in period_pairs)
 
-    return OverallPerformance(portfolio_periods, asset_factory, table)
+    #reindex one by one - must go in ascending order.
+    #periods are reindexed *in place* so that by the time one is reindexed, it's ready to serve
+    #as the reference for the next
+    for period_pair in period_pairs:
+        reindex(period_pair[0]._table, period_pair[1]._table)
+
+    overall_period = pandas.concat(period._table for period in portfolio_periods)
+    overall_period['date'] = overall_period.index
+    overall_period.drop_duplicates(cols=['date'], take_last=True, inplace=True)
+
+    assert overall_period.ix[0].name == portfolio_periods[0].begin()
+    assert overall_period.ix[-1].name == portfolio_periods[-1].end()
+
+    #TODO: consider 'fillna' rather than 'dropna'. this would fill the first day with 0.0 on daily and 
+    #cumulative growth which is correct
+    overall_period["Daily Returns"] = overall_period["index"].pct_change().dropna()
+    overall_period = overall_period.dropna()
+    overall_period["Cumulative Returns"] = ((overall_period["Daily Returns"] + 1.0).cumprod() - 1.0)
+
+    return OverallPerformance(portfolio_periods, asset_factory, overall_period)
 
 class OverallPerformance(object):
     """ OverallPerformance is how a strategy does over time. """
@@ -98,27 +157,64 @@ class OverallPerformance(object):
         self.__invariant()
         return self.cagr() / self.volatility()
 
-    #TODO: add test on this.
-    #FIXME: cardinality no longer is a useful idea on the 'asset universe'.
-    #FIXME: yep, cardinality is now officially a bug.
     def number_of_trades(self):
         """ Simple turnover metric - an estimate of the number of trades we make """
         self.__invariant()
-        return len(self._portfolio_periods) * self._asset_factory.cardinality()
+        trades = self.__trade_table()
+
+        return len(trades) * len(trades.columns)
+
+    #TODO: hand test this on a yearly rebalance of spy and lqd as see in
+    #test/test_performance.py:test_number_of_trades_yearly. Can depend on the basis calculations
+    #of the first period, but then check that the returns of such basis changes are correct by hand
+    #using my own adjusted close
+    def __trade_table(self):
+        """ Constructs a table of what trades would be made and when to recreate the index performance """
+        self.__invariant()
+
+        basis = self._table.filter(regex=".*_Basis")
+
+        #Only NA to be filled is the first day, which we fill with the first day's basis since the
+        #'day before', not represented in the series, would have had a 0 basis.
+        deltas = basis.diff().fillna(basis)
+
+        #NOTE: this does not remove basis diffs that are astoundingly close to zero
+        deltas = deltas[(deltas != 0.0)].dropna()
+
+        #Add on the last day as a negative, since we will be 'selling' our entire basis that day
+        return deltas.append(-basis.ix[-1])
+
+    def growth_curve(self, principle, comissions):
+        """ Simulates the actual performance of a certain amount of cash, charging comissions """
+
+        trades = self.__trade_table()
+        trades['Comissions'] = comissions
+        table = self._table[['Daily Returns']] + 1.0
+        table['Comissions'] = trades['Comissions']
+        table['Comissions'].fillna(0.0, inplace=True)
+        number_assets = len(self._table.filter(regex=".*_Basis").columns)
+
+        def principle_accumulator(principle):
+            """ Wrapper that returns a stateful apply that calculates principle growth """
+
+            nonlocal = {"principle":principle} # python 2.7 'mutable closure'
+            def _(row):
+                """ Inner helper function to provide a stateful apply that calculates principle growth """
+
+                total_comissions = row["Comissions"] * number_assets
+                nonlocal["principle"] = nonlocal["principle"] * row["Daily Returns"] - total_comissions
+                return nonlocal["principle"]
+            return _
+
+        accumulator = principle_accumulator(principle)
+
+        return table.apply(accumulator, axis=1)
 
 def make_period_performance(begin_date, end_date, index):
     """ Factory for a period performance object """
-    #NOTE: due to pct diff taking N points and returning N-1 points, a period perfomance
-    #of returns is inclusive of the end date but exclusive of the begin date
-
-    begin = begin_date
-
-    index = index.table
-    index = index[index.index >= begin][index.index <= end_date]
-    table = pandas.DataFrame()
-
-    table["Daily Returns"] = index.pct_change().dropna()
-    return PeriodPerformance(begin, end_date, table)
+    assert index.table.index[0] == begin_date
+    assert index.table.index[-1] == end_date
+    return PeriodPerformance(begin_date, end_date, index.table)
 
 class PeriodPerformance(object):
     """ How a strategy does over it's trading period. A period performance is exclusive of it's begin
@@ -133,7 +229,7 @@ class PeriodPerformance(object):
 
     def daily_returns(self):
         """ Returns a daily series of this period's returns """
-        return self._table["Daily Returns"]
+        return self._table["index"].pct_change().dropna()
 
     def number_of_days(self):
         """ Returns number of trading days in this period """

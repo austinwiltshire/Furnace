@@ -153,6 +153,10 @@ class NDayRebalance(RebalancingRule):
 
 #TODO: look at eliminating most of these and decomposing common helpers out of them, DRY this up
 #family strategies
+#TODO: single asset currently has to pass in universe. There ought to be no reason to pass in universe,
+#as the single asset ought to act like a whole asset universe. Investigate whether or not a new strategy
+#subclass, or hierarchy can develop between asset universe and asset such that a single asset is its own
+#universe
 def buy_and_hold_single_asset(universe, begin_date, end_date, asset, fcalendar):
     """ Purchases a single asset at the beginning of the period and holds it to the end.
     Represents a family of potential strategies """

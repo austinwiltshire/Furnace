@@ -103,7 +103,10 @@ class Weightings(object):
     def make_index_on(self, begin_date, end_date):
         """ Creates an index of these weightings on date """
 
-        index_value = pandas.concat([weighting.make_partial_index(begin_date, end_date) for weighting in self._weightings], axis=1).sum(axis=1)
+        index_value = pandas.concat([weighting.make_partial_index(begin_date, end_date) for weighting in self._weightings], axis=1)
+
+        index_value['index'] = index_value.filter(regex=".*Index").sum(axis=1)
+
         return Index(index_value, self, begin_date)
 # pylint: enable=R0903
 
@@ -139,8 +142,6 @@ class Weighting(object):
     def __lt__(self, other):
         return  (self.asset(), self.weight()) < (other.asset(), other.weight())
 
-# pylint: disable=R0903
-#NOTE: too few public methods
 class Index(object):
     """ A collection of assets held by weighting indexed to 1.0 on date """
 
@@ -153,6 +154,4 @@ class Index(object):
         """ Calculates total return by a certain date """
         assert date >= self._begin_date
 
-        return self.table[date] - 1.0
-# pylint: enable=R0903
-
+        return self.table['index'][date] - 1.0

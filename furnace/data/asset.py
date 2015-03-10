@@ -89,11 +89,14 @@ class Asset(object):
     #optimization
     def make_index(self, begin_date, basis, end_date):
         """ Creates an index for this asset weighted initially at basis """
-        table = self._table[(self._table.index >= begin_date) & (self._table.index <= end_date)]["Adjusted Close"]
+        table = self._table[(self._table.index >= begin_date) & (self._table.index <= end_date)][["Adjusted Close"]]
+        table.columns = [self.symbol() + "_AdjustedPrice"]
 
         initial_basis = basis / table.ix[begin_date]
+        table[self.symbol() + "_Basis"] = initial_basis[0]
 
-        return table * initial_basis
+        table[self.symbol() + "_Index"] = table[self.symbol() + "_AdjustedPrice"] * table[self.symbol() + "_Basis"]
+        return table 
 
     #TODO add to some sort of helper class rather than reimplementing everywhere
     #TODO test
