@@ -1,20 +1,27 @@
+BENCHMARK:
+
+Between 
+With comissions calculated! 
+7.25% CAGR, .79 risk to return ratio
+Between jan 2 2003 and dec 31 2012, 18% stocks 72% bonds rebalanced every 7 trading days
+
 FEATURES:
 
 * Critical Path:
 ** WIP
 
-1.1 fix performance.py number_of_trades
-1.1.1 rename asset universe to asset factory
-
-** Imminent (Version 3):
-
-1. add in commissions calculation for overall performance and redo daily rebalance experiment
-1.2 redo daily balance experiment
 2. feature engineering using linear model
+2.0.1 create annualization helper that annualizes comission adjusted returns
+2.0.2 create comission adjusted volatility function - pretty sure this was ignored :P create comission adjusted risk to return ratio
+2.0.2 create 'benchmark' function that takes in a date range and returns the 18% stocks 72% bonds benchmark portfolio over the period to get CAGR and R2R after comissions
+2.0.3 redo linear model with single day trading periods, bull dollar
 2.1 daily lags (try multiple days up to 5)
 2.2 weekly lags (week 1 and week 1 minus day1 for comparison)
 2.3 monthly lags (month 1 and month 1 minus week1, we'll do straight trading day months of 25)
 2.4 yearly lags (month 2-12)
+
+** Imminent (Version 3):
+
 2.5 RSI
 2.6 IBS
 2.7 moving averages
@@ -95,6 +102,11 @@ just to check, i ran an ARMA on daily returns and was able to pull out useful si
 
 version 2.1
 2 weeks time box of cleaning things up
+
+1.1 fix performance.py number_of_trades
+1.1.1 rename asset universe to asset factory
+1. add in commissions calculation for overall performance and redo daily rebalance experiment
+1.2 redo daily balance experiment
 
 
 PRODUCTIVITY:
@@ -216,6 +228,9 @@ divide by adjusted lines
 
 * to get rid of protected member warning in pylint
 #pylint: disable=W0212
+
+* to start ipython multicore engine
+ipcluster start -n4
 
 * libs learned:
 ** pandas
