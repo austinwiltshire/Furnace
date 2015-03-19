@@ -123,7 +123,7 @@ class OverallPerformance(object):
         return self._table["Daily Returns"].mean()
 
     def volatility(self):
-        """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period """
+        """ Returns the simple daily volatility of price movements, as a percent, of this entire performance period annualized """
         self.__invariant()
         #NOTE: http://wiki.fool.com/How_to_Calculate_the_Annualized_Volatility
         return numpy.sqrt(furnace.data.fcalendar.trading_days_in_year()*self._table["Daily Returns"].var())
