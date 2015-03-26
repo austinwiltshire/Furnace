@@ -3,6 +3,12 @@
 from datetime import datetime
 from furnace import strategy
 from furnace.test.helpers import make_default_asset_factory, is_close, CALENDAR, DEFAULT_ASSET_FACTORY
+from furnace import performance
+
+
+#TODO: mentioned elsewhere, but i really just need a single set of canned fake performance data that have
+#hand calculated metrics on. all of the rest of this can be put under either integration (for hand checked)
+#or regression tests
 
 def test_cagr():
     """ Tests a buy and hold CAGR of the SPY from 1-2-3003 to 12-31-2012
@@ -17,6 +23,13 @@ def test_cagr():
     performance_ = test_strategy.performance_during(begin, end)
 
     assert is_close(performance_.cagr(), 0.0667)
+
+    #Buy and hold only pays 2 comissions which are trivial at 100
+    assert is_close(performance.commission_adj_cagr(CALENDAR, performance_, 100000.00, 7.00), 0.0667)
+
+    #But they add up at 100 dollars.
+    #NOTE: REGRESSION TEST
+    assert is_close(performance.commission_adj_cagr(CALENDAR, performance_, 100.00, 7.00), 0.0548)
 
 def test_growth_by():
     """ Tests buy and hold single asset spy growth_by at multiple points between 2003-1-2 and 2012-12-31
@@ -46,6 +59,10 @@ def test_volatility():
 
     assert is_close(performance_.volatility(), 0.168)
 
+    #Volatility is more shakey for portfolio's more sensitive to comissions
+    #NOTE: regression test
+    assert is_close(performance.commission_adj_volatility(performance_, 100.00, 7.00), 0.1696)
+
 def test_simple_sharpe():
     """ Regression test of simplified sharpe ratio """
     begin = datetime(2003, 1, 2)
@@ -56,6 +73,9 @@ def test_simple_sharpe():
     rebalanced_perf = rebalanced.performance_during(begin, end)
 
     assert is_close(rebalanced_perf.simple_sharpe(), .329)
+
+    #Comission adjusted simple sharpe should be lower for comissions sensitive portfolios
+    assert is_close(performance.commission_adj_simple_sharpe(CALENDAR, rebalanced_perf, 100.00, 7.00), .2710)
 
 def test_number_of_trades_buyhold():
     """ Buy and hold of one single asset should have two trades, one entry and one exit """
@@ -124,7 +144,7 @@ def test_actual_performance():
     total_comissions = number_of_trades * comissions
     assert is_close(rebalance_perf.growth_curve(100000.00, 10.00).ix[-1], actual_growth - total_comissions)
 
-def test_actual_performance_2months():
+def test_actual_performance_2years():
     """ Test that actual performance of 100,000 in  mixed stocks and bonds portfolio, 80% stocks 20%
     stocks, is X after comissions of 7 dollars a trade are taken into account """
 

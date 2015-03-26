@@ -6,6 +6,7 @@ import datetime
 import itertools
 import re
 import furnace.data.fcalendar
+import furnace.data.asset
 
 def reindex(table1, table2):
     """ Reindexes table2 to have basis the same as end of table1. modifies it's second argument """
@@ -178,8 +179,9 @@ class OverallPerformance(object):
         #'day before', not represented in the series, would have had a 0 basis.
         deltas = basis.diff().fillna(basis)
 
-        #NOTE: this does not remove basis diffs that are astoundingly close to zero
-        deltas = deltas[(deltas != 0.0)].dropna()
+
+        #remove sufficiently close to zero deltas to account for floating point error
+        deltas = deltas[pandas.DataFrame(-numpy.isclose(deltas, 0.0)).any(axis=1).values].dropna()
 
         #Add on the last day as a negative, since we will be 'selling' our entire basis that day
         return deltas.append(-basis.ix[-1])
@@ -209,6 +211,36 @@ class OverallPerformance(object):
         accumulator = principle_accumulator(principle)
 
         return table.apply(accumulator, axis=1)
+
+#TODO: unit test
+#TODO: many performance tests could be simplified if i had manually created fake performance 
+#data to calculate metrics from
+def commission_adj_cagr(fcalendar, performance_, principle, comissions):
+    """ Calculates a CAGR metric after adjusting for comissions """
+
+    final_value = performance_.growth_curve(principle, comissions).ix[-1]
+    return_ = (final_value - principle) / principle
+    trading_days = fcalendar.number_trading_days_between(performance_.begin(), performance_.end())
+
+    return furnace.data.asset.annualized(return_, trading_days)
+
+
+#TODO: should performance have an 'adjust for comissions' method that returns a new performance that's
+#been adjusted for commissions, then reuse the volatility and cagr methods off there?
+#Alternatively, should there be no such thing as a non comission adjusted performance?
+def commission_adj_volatility(performance_, principle, comissions):
+    """ Calculates a volatility metric after adjusting for comissions """
+
+    growth_curve = performance_.growth_curve(principle, comissions)
+    daily_returns = growth_curve.pct_change().dropna()
+
+    return numpy.sqrt(furnace.data.fcalendar.trading_days_in_year()*daily_returns.var())
+
+def commission_adj_simple_sharpe(fcalendar, performance_, principle, comissions):
+    """ Calculates a simple sharpe ratio after adjusting for comissions """
+
+    return (commission_adj_cagr(fcalendar, performance_, principle, comissions) /
+            commission_adj_volatility(performance_, principle, comissions))
 
 def make_period_performance(begin_date, end_date, index):
     """ Factory for a period performance object """
